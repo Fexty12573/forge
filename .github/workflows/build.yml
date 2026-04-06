@@ -1,3 +1,5 @@
+name: Build
+
 on:
   push:
     branches:
@@ -42,7 +44,8 @@ jobs:
           pacman-key --recv BC26F752D25B92CE272E0F44F7FD5492264BB9D0 --keyserver keyserver.ubuntu.com
           pacman-key --lsign-key BC26F752D25B92CE272E0F44F7FD5492264BB9D0
 
-          pacman -U https://pkg.devkitpro.org/devkitpro-keyring.pkg.tar.zst
+          pacman -Sy --noconfirm
+          pacman -U --noconfirm https://pkg.devkitpro.org/devkitpro-keyring.pkg.tar.zst
 
           pacman -Syu --noconfirm
           pacman -S --noconfirm --needed \
