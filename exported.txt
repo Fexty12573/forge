@@ -1,0 +1,9 @@
+{
+    global:
+        __module_init;
+        __module_fini;
+        hookCreate;
+        hookFunction;
+
+    local: *;
+};  

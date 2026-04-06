@@ -1,0 +1,3 @@
+[submodule "libs/libnx"]
+	path = libs/libnx
+	url = https://github.com/jeffi6375/libnx.git
