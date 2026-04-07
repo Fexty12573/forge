@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - main
-      - cicd-docker
   pull_request:
     branches:
       - main
@@ -21,7 +20,9 @@ jobs:
 
     steps:
       - name: Install git+python
-        run: apt install git python3 python3-venv -y
+        run: |
+          apt update
+          apt install git python3 python3-venv -y
 
       - name: Checkout
         uses: actions/checkout@v6
