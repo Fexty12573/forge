@@ -1,0 +1,84 @@
+name: Build
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    container:
+      image: archlinux:latest
+
+    env:
+      DEVKITPRO: /opt/devkitpro
+
+    steps:
+      - name: Install git
+        run: |
+          set -euo pipefail
+          pacman -Sy --noconfirm git ca-certificates
+
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          submodules: recursive
+
+      - name: Install toolchains and Python deps
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          # Initialize Arch keyring in the fresh container.
+          pacman-key --init
+          pacman-key --populate archlinux
+
+          # Add the devkitPro package repositories and signing key.
+          cat <<'EOF' >> /etc/pacman.conf
+
+          [dkp-libs]
+          Server = https://pkg.devkitpro.org/packages
+          [dkp-linux]
+          Server = https://pkg.devkitpro.org/packages/linux/$arch
+          EOF
+
+          pacman-key --recv BC26F752D25B92CE272E0F44F7FD5492264BB9D0 --keyserver keyserver.ubuntu.com
+          pacman-key --lsign-key BC26F752D25B92CE272E0F44F7FD5492264BB9D0
+
+          pacman -Sy --noconfirm
+          pacman -U --noconfirm https://pkg.devkitpro.org/devkitpro-keyring.pkg.tar.zst
+
+          pacman -Syu --noconfirm
+          pacman -S --noconfirm --needed \
+            base-devel \
+            python \
+            python-pip \
+            devkitARM \
+            switch-dev
+
+          python -m venv .venv
+          source .venv/bin/activate
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt
+
+      - name: Build
+        shell: bash
+        run: |
+          set -euo pipefail
+          source /etc/profile.d/devkit-env.sh
+          source .venv/bin/activate
+          make -j$(nproc)
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v7
+        with:
+          name: forge-build-${{ github.sha }}
+          path: |
+            subsdk.nso
+            main.npdm
+
