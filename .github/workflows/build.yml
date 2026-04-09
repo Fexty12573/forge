@@ -13,16 +13,16 @@ jobs:
   build:
     runs-on: ubuntu-latest
     container:
-      image: archlinux:latest
+      image: devkitpro/devkita64:latest
 
     env:
       DEVKITPRO: /opt/devkitpro
 
     steps:
-      - name: Install git
+      - name: Install git+python
         run: |
-          set -euo pipefail
-          pacman -Sy --noconfirm git ca-certificates
+          apt update
+          apt install git python3 python3-venv -y
 
       - name: Checkout
         uses: actions/checkout@v6
@@ -34,37 +34,15 @@ jobs:
         run: |
           set -euo pipefail
 
-          # Initialize Arch keyring in the fresh container.
-          pacman-key --init
-          pacman-key --populate archlinux
-
-          # Add the devkitPro package repositories and signing key.
-          cat <<'EOF' >> /etc/pacman.conf
-
-          [dkp-libs]
-          Server = https://pkg.devkitpro.org/packages
-          [dkp-linux]
-          Server = https://pkg.devkitpro.org/packages/linux/$arch
-          EOF
-
-          pacman-key --recv BC26F752D25B92CE272E0F44F7FD5492264BB9D0 --keyserver keyserver.ubuntu.com
-          pacman-key --lsign-key BC26F752D25B92CE272E0F44F7FD5492264BB9D0
-
-          pacman -Sy --noconfirm
-          pacman -U --noconfirm https://pkg.devkitpro.org/devkitpro-keyring.pkg.tar.zst
-
-          pacman -Syu --noconfirm
-          pacman -S --noconfirm --needed \
-            base-devel \
-            python \
-            python-pip \
+          dkp-pacman -Syu --noconfirm
+          dkp-pacman -S --noconfirm --needed \
             devkitARM \
             switch-dev
 
-          python -m venv .venv
+          python3 -m venv .venv
           source .venv/bin/activate
-          python -m pip install --upgrade pip
-          python -m pip install -r requirements.txt
+          python3 -m pip install --upgrade pip
+          python3 -m pip install -r requirements.txt
 
       - name: Build
         shell: bash
