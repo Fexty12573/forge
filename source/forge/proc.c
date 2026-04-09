@@ -2,9 +2,9 @@
 #include "forge/types.h"
 #include <string.h>
 
-static Handle s_Handle = INVALID_HANDLE;
+static Handle s_handle = INVALID_HANDLE;
 
-static void procReceiveHandle(void* session_handle_ptr)
+static void receiveHandle(void* session_handle_ptr)
 {
     // Convert the argument to a handle we can use.
     Handle session_handle = (Handle)(uintptr_t)session_handle_ptr;
@@ -15,7 +15,7 @@ static void procReceiveHandle(void* session_handle_ptr)
     R_ERRORONFAIL(svcReplyAndReceive(&idx, &session_handle, 1, INVALID_HANDLE, UINT64_MAX));
 
     // Set the process handle.
-    s_Handle = ((u32*)armGetTls())[3];
+    s_handle = ((u32*)armGetTls())[3];
 
     // Close the session.
     svcCloseHandle(session_handle);
@@ -28,7 +28,7 @@ static void procReceiveHandle(void* session_handle_ptr)
         ;
 }
 
-static void procGetHandleViaIpcTrick(void)
+static void getHandleViaIpcTrick(void)
 {
     alignas(PAGE_SIZE) u8 temp_thread_stack[0x1000];
 
@@ -38,7 +38,7 @@ static void procGetHandleViaIpcTrick(void)
 
     // Create a new thread to receive our handle.
     Handle thread_handle;
-    R_ERRORONFAIL(svcCreateThread(&thread_handle, (void*)&procReceiveHandle, (void*)(uintptr_t)server_handle,
+    R_ERRORONFAIL(svcCreateThread(&thread_handle, (void*)&receiveHandle, (void*)(uintptr_t)server_handle,
         temp_thread_stack + sizeof(temp_thread_stack), 0x20, 2));
 
     // Start the new thread.
@@ -59,21 +59,21 @@ static void procGetHandleViaIpcTrick(void)
     svcCloseHandle(thread_handle);
 }
 
-static Result procGetHandleViaMesosphere()
+static Result getHandleViaMesosphere()
 {
-    return svcGetInfo((u64*)&s_Handle, 65001, INVALID_HANDLE, 0);
+    return svcGetInfo((u64*)&s_handle, 65001, INVALID_HANDLE, 0);
 }
 
-Handle procGetHandle()
+Handle forge_proc_getHandle()
 {
-    if (s_Handle == INVALID_HANDLE) {
+    if (s_handle == INVALID_HANDLE) {
         // Try to ask mesosphere for our process handle.
-        Result r = procGetHandleViaMesosphere();
+        Result r = getHandleViaMesosphere();
 
         // Fallback to an IPC trick if mesosphere is old/not present.
         if (R_FAILED(r))
-            procGetHandleViaIpcTrick();
+            getHandleViaIpcTrick();
     }
 
-    return s_Handle;
+    return s_handle;
 }

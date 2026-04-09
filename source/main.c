@@ -1,13 +1,10 @@
-#include <stdio.h>
-#include <string.h>
-
 #include "forge/hook.h"
 #include "forge/mem.h"
 #include "forge/proc.h"
-#include "switch.h"
+#include <stdio.h>
+#include <string.h>
 
-typedef void (*AdjustSharpness)(void*, s32, bool);
-AdjustSharpness originalAdjustSharpness = NULL;
+void (*originalAdjustSharpness)(void*, s32, bool) = NULL;
 
 void adjustSharpness(void* unknown, s32 amount, bool ignoreSkills)
 {
@@ -17,17 +14,7 @@ void adjustSharpness(void* unknown, s32 amount, bool ignoreSkills)
     originalAdjustSharpness(unknown, amount * 150, ignoreSkills);
 }
 
-void forgeMain()
+void forge_main()
 {
-    hookCreate((void*)(g_mainTextAddr + 0x2AD288), (void*)(adjustSharpness), (void**)(&originalAdjustSharpness));
-}
-
-void virtmemSetup(void);
-
-void forgeInit()
-{
-    envSetup(NULL, procGetHandle(), NULL);
-    virtmemSetup();
-    memSetup();
-    forgeMain();
+    forge_hook_create((void*)(g_mainTextAddr + 0x2AD288), (void*)(adjustSharpness), (void**)(&originalAdjustSharpness));
 }

@@ -9,9 +9,6 @@ endif
 TOPDIR ?= $(CURDIR)
 include $(TOPDIR)/switch32_rules
 
-# Don't build crt0 in libnx
-export CRT0 := false
-
 #---------------------------------------------------------------------------------
 # TARGET is the name of the output
 # BUILD is the directory where object files & intermediate files will be placed
@@ -23,7 +20,7 @@ TARGET		:=	subsdk
 BUILD		:=	build
 SOURCES 	:= 	source source/forge
 DATA		:=	data
-INCLUDES	:=	include libs/libnx/nx/include
+INCLUDES	:=	include
 
 #---------------------------------------------------------------------------------
 # options for code generation
@@ -42,9 +39,9 @@ CXXFLAGS	:= $(CFLAGS) -fno-rtti -fomit-frame-pointer -fno-exceptions -fno-asynch
 
 ASFLAGS	:=	-g $(ARCH)
 
-LDFLAGS  =  -specs=$(TOPDIR)/switch32.specs -g $(ARCH) -Wl,-Map,$(notdir $*.map) -Wl,--version-script=$(TOPDIR)/exported.txt -Wl,-init=__module_init -Wl,-fini=__module_fini -Wl,--export-dynamic -nodefaultlibs
+LDFLAGS  =  -specs=$(TOPDIR)/switch32.specs -g $(ARCH) -Wl,-Map,$(notdir $*.map) -Wl,--version-script=$(TOPDIR)/exported.txt -Wl,-init=forge_init -Wl,-fini=forge_fini -Wl,--export-dynamic -nodefaultlibs
 
-LIBS	:= -lgcc -lstdc++ -u malloc -lnx32
+LIBS	:= -lgcc -lstdc++ -u malloc -lnx32_min
 
 #---------------------------------------------------------------------------------
 # list of directories containing libraries, this must be the top level containing
@@ -68,10 +65,8 @@ export VPATH	:=	$(foreach dir,$(SOURCES),$(CURDIR)/$(dir)) \
 export DEPSDIR	?=	$(CURDIR)/$(BUILD)
 
 CFILES		:=	$(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.c)))
-CFILES		:=	$(filter-out console.c, $(CFILES))
 CPPFILES	:=	$(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.cpp)))
 SFILES		:=	$(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.s)))
-SFILES		:=	$(filter-out switch32_crt0.s cache.s svc.s exception.s readtp.s switch_crt0.s, $(SFILES))
 
 #---------------------------------------------------------------------------------
 # use CXX for linking C++ projects, CC for standard C
@@ -117,13 +112,13 @@ endif
 all: $(BUILD)
 
 $(BUILD):
-	@$(MAKE) -C $(CURDIR)/libs/libnx/nx -f $(CURDIR)/libs/libnx/nx/Makefile.32.mk
+	@$(MAKE) -C $(CURDIR)/libs/libnx/nx -f $(CURDIR)/libs/libnx/nx/Makefile.32_min.mk
 	@[ -d $@ ] || mkdir -p $@
 	@$(MAKE) -C $(BUILD) -f $(CURDIR)/Makefile
 
 #---------------------------------------------------------------------------------
 clean:
-	@$(MAKE) -C $(CURDIR)/libs/libnx/nx -f $(CURDIR)/libs/libnx/nx/Makefile.32.mk clean
+	@$(MAKE) -C $(CURDIR)/libs/libnx/nx -f $(CURDIR)/libs/libnx/nx/Makefile.32_min.mk clean
 	@echo clean ...
 	@rm -fr build* *.nso *.elf *.npdm
 

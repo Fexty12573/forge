@@ -2,4 +2,4 @@
 
 #include "switch.h"
 
-Handle procGetHandle();
+Handle forge_proc_getHandle();

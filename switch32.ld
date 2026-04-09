@@ -1,6 +1,6 @@
 OUTPUT_FORMAT(elf32-littlearm)
 OUTPUT_ARCH(arm)
-ENTRY(__module_start)
+ENTRY(forge_start)
 
 PHDRS
 {

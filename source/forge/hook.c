@@ -63,7 +63,7 @@ static int calculateHookLength(uintptr_t addr, bool thumb, int min_length)
     return length;
 }
 
-void* hookFunction(void* const target, void* const detour, Jit* const jit, const uintptr_t jit_size)
+static void* hookFunction(void* const target, void* const detour, Jit* const jit)
 {
     if (!target || !detour) {
         char buffer[256];
@@ -88,7 +88,7 @@ void* hookFunction(void* const target, void* const detour, Jit* const jit, const
     }
 
     uint32_t* trampoline = (uint32_t*)(jit->rw_addr);
-    if (trampoline && jit_size >= total_bytes + 20u) {
+    if (trampoline && jit->size >= total_bytes + 20u) {
         if (thumb_mode) {
             uint16_t* thumb_tramp = (uint16_t*)(trampoline);
             uint16_t* src = (uint16_t*)(real_target);
@@ -142,6 +142,7 @@ void* hookFunction(void* const target, void* const detour, Jit* const jit, const
     }
 
     __builtin___clear_cache((char*)(real_target), (char*)(real_target) + total_bytes);
+
     if (trampoline) {
         uintptr_t result_ptr = (uintptr_t)(jit->rx_addr);
 
@@ -157,7 +158,7 @@ void* hookFunction(void* const target, void* const detour, Jit* const jit, const
 
 static Jit trampoline;
 
-void hookCreate(void* const target, void* const detour, void** original)
+void forge_hook_create(void* const target, void* const detour, void** original)
 {
     if (original != NULL) {
         Result rc = jitCreate(&trampoline, PAGE_SIZE);
@@ -180,7 +181,7 @@ void hookCreate(void* const target, void* const detour, void** original)
         }
     }
 
-    void* final_trampoline = hookFunction(target, detour, &trampoline, PAGE_SIZE);
+    void* final_trampoline = hookFunction(target, detour, &trampoline);
 
     if (original != NULL) {
         if (final_trampoline != NULL) {

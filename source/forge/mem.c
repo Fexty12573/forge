@@ -1,40 +1,40 @@
 #include "forge/mem.h"
 
-Result memGetMap(MemoryInfo* info, u32 addr)
+static Result getMap(MemoryInfo* info, u32 addr)
 {
     u32 map;
     return svcQueryMemory(info, &map, addr);
 }
 
-u32 memGetMapAddr(u32 addr)
+static u32 getMapAddr(u32 addr)
 {
     MemoryInfo map;
-    memGetMap(&map, addr);
+    getMap(&map, addr);
     return map.addr;
 }
 
-u32 memNextMap(u32 addr)
+static u32 nextMap(u32 addr)
 {
     MemoryInfo map;
-    memGetMap(&map, addr);
-    memGetMap(&map, map.addr + map.size);
+    getMap(&map, addr);
+    getMap(&map, map.addr + map.size);
 
     if (map.type != MemType_Unmapped)
         return map.addr;
 
-    return memNextMap(map.addr);
+    return nextMap(map.addr);
 }
 
-u32 memNextMapOfType(u32 addr, u32 type)
+static u32 nextMapOfType(u32 addr, u32 type)
 {
     MemoryInfo map;
-    memGetMap(&map, addr);
-    memGetMap(&map, map.addr + map.size);
+    getMap(&map, addr);
+    getMap(&map, map.addr + map.size);
 
     if (map.type == type)
         return map.addr;
 
-    return memNextMapOfType(map.addr, type);
+    return nextMapOfType(map.addr, type);
 }
 
 void nninitStartup();
@@ -45,12 +45,12 @@ u32 g_mainDataAddr;
 u32 g_mainBssAddr;
 u32 g_mainHeapAddr;
 
-void memSetup()
+void forge_mem_init()
 {
     // nninitStartup can be reasonably assumed to be exported by main
-    g_mainTextAddr = memGetMapAddr((u32)nninitStartup);
-    g_mainRodataAddr = memNextMap(g_mainTextAddr);
-    g_mainDataAddr = memNextMap(g_mainRodataAddr);
-    g_mainBssAddr = memNextMap(g_mainDataAddr);
-    g_mainHeapAddr = memNextMapOfType(g_mainBssAddr, MemType_Heap);
+    g_mainTextAddr = getMapAddr((u32)nninitStartup);
+    g_mainRodataAddr = nextMap(g_mainTextAddr);
+    g_mainDataAddr = nextMap(g_mainRodataAddr);
+    g_mainBssAddr = nextMap(g_mainDataAddr);
+    g_mainHeapAddr = nextMapOfType(g_mainBssAddr, MemType_Heap);
 }

@@ -1,9 +1,8 @@
 {
     global:
-        __module_init;
-        __module_fini;
-        hookCreate;
-        hookFunction;
+        forge_init;
+        forge_fini;
+        forge_hook_create;
 
     local: *;
 };  
