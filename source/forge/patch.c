@@ -34,6 +34,11 @@ void forge_patch_destroy(Patch* patch)
     }
 
     forge_patch_disable(patch);
+
+    free(patch->patch_bytes);
+    free(patch->original_bytes);
+
+    memset(patch, 0, sizeof(Patch));
 }
 
 void forge_patch_enable(Patch* patch)
