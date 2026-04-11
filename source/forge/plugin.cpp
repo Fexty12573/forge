@@ -6,7 +6,6 @@
 
 #include <dirent.h>
 
-#include <cassert>
 #include <compare>
 #include <cstdio>
 #include <cstdlib>
@@ -43,6 +42,7 @@ struct Plugin {
     AlignedBuffer<PAGE_SIZE> bss;
     size_t bss_size;
     ShaHash hash;
+    void (*entrypoint)();
 };
 
 struct PluginLoader {
@@ -127,7 +127,11 @@ void forge_plugin_loadPlugins(void)
     }
 
     Result r = nn::ro::Initialize();
-    assert(R_SUCCEEDED(r));
+    if (R_FAILED(r)) {
+        forge_log("Failed to initialize ro: 0x%08X", r);
+        closedir(dir);
+        return;
+    }
 
     std::set<ShaHash> plugin_hashes;
 
@@ -148,10 +152,19 @@ void forge_plugin_loadPlugins(void)
                 continue;
             }
 
-            nn::ro::GetBufferSize(&plugin.bss_size, plugin.data.get());
-            assert(R_SUCCEEDED(r));
-
             const auto nro_header = (nn::ro::NroHeader*)plugin.data.get();
+            if (nro_header->magic != 0x304F524E) {
+                forge_log("Invalid NRO file: %s", path);
+                forge_log("Expected magic 0x304F524E, got 0x%08X", nro_header->magic);
+                continue;
+            }
+
+            r = nn::ro::GetBufferSize(&plugin.bss_size, plugin.data.get());
+            if (R_FAILED(r)) {
+                forge_log("Failed to get BSS size for plugin %s: 0x%08X", path, r);
+                continue;
+            }
+
             nn::crypto::GenerateSha256Hash(&plugin.hash, sizeof(ShaHash), nro_header, nro_header->size);
 
             plugin_hashes.insert(plugin.hash);
@@ -183,7 +196,10 @@ void forge_plugin_loadPlugins(void)
     }
 
     r = nn::ro::RegisterModuleInfo(&s_pluginLoader.registration_info, nrr_data.get());
-    assert(R_SUCCEEDED(r));
+    if (R_FAILED(r)) {
+        forge_log("Failed to register module info: 0x%08X", r);
+        return;
+    }
 
     for (auto& plugin : s_pluginLoader.plugins) {
         forge_log("Loading plugin %s", plugin.path.c_str());
@@ -195,15 +211,19 @@ void forge_plugin_loadPlugins(void)
             plugin.bss.get(),
             plugin.bss_size,
             nn::ro::BindFlag_Now);
-        assert(R_SUCCEEDED(r));
+        if (R_FAILED(r)) {
+            forge_log("Failed to load plugin %s: 0x%08X", plugin.path.c_str(), r);
+            continue;
+        }
     }
 
     for (const auto& plugin : s_pluginLoader.plugins) {
-        void (*entrypoint)();
+        r = nn::ro::LookupModuleSymbol((uintptr_t*)&plugin.entrypoint, &plugin.module, "main");
+        if (R_FAILED(r)) {
+            forge_log("Failed to lookup module symbol for plugin %s: 0x%08X", plugin.path.c_str(), r);
+            continue;
+        }
 
-        r = nn::ro::LookupModuleSymbol((uintptr_t*)&entrypoint, &plugin.module, "main");
-        assert(R_SUCCEEDED(r));
-
-        entrypoint();
+        plugin.entrypoint();
     }
 }

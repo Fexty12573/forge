@@ -20,7 +20,7 @@ TARGET		:=	subsdk
 BUILD		:=	build
 SOURCES 	:= 	source source/forge
 DATA		:=	data
-INCLUDES	:=	include libs/libnx/nx/include libs/nnSdk/include
+INCLUDES	:=	include libs/libnx/nx/include libs/nnsdk/include
 
 #---------------------------------------------------------------------------------
 # options for code generation
