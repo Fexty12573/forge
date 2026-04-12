@@ -19,10 +19,10 @@ jobs:
       DEVKITPRO: /opt/devkitpro
 
     steps:
-      - name: Install git
+      - name: Install git and lz4
         run: |
           apt update
-          apt install git -y
+          apt install git liblz4-dev -y
 
       - name: Checkout
         uses: actions/checkout@v6
