@@ -19,17 +19,17 @@ jobs:
       DEVKITPRO: /opt/devkitpro
 
     steps:
-      - name: Install git+python
+      - name: Install git
         run: |
           apt update
-          apt install git python3 python3-venv -y
+          apt install git -y
 
       - name: Checkout
         uses: actions/checkout@v6
         with:
           submodules: recursive
 
-      - name: Install toolchains and Python deps
+      - name: Install toolchain
         shell: bash
         run: |
           set -euo pipefail
@@ -39,17 +39,11 @@ jobs:
             devkitARM \
             switch-dev
 
-          python3 -m venv .venv
-          source .venv/bin/activate
-          python3 -m pip install --upgrade pip
-          python3 -m pip install -r requirements.txt
-
       - name: Build
         shell: bash
         run: |
           set -euo pipefail
           source /etc/profile.d/devkit-env.sh
-          source .venv/bin/activate
           make -j$(nproc)
 
       - name: Upload build artifacts
