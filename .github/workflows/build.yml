@@ -29,16 +29,6 @@ jobs:
         with:
           submodules: recursive
 
-      - name: Install toolchain
-        shell: bash
-        run: |
-          set -euo pipefail
-
-          dkp-pacman -Syu --noconfirm
-          dkp-pacman -S --noconfirm --needed \
-            devkitARM \
-            switch-dev
-
       - name: Build
         shell: bash
         run: |
