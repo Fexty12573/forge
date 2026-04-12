@@ -6,9 +6,9 @@
 extern "C" {
 #endif
 
+void forge_plugin_init(void);
 void forge_plugin_loadPlugins(void);
 
 #ifdef __cplusplus
 }
 #endif
-

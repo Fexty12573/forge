@@ -11,6 +11,7 @@ void (*original_sApp_run)(void*) = NULL;
 void sApp_run(void* app)
 {
     forge_log("Loading plugins...");
+    forge_plugin_init();
     forge_plugin_loadPlugins();
     return original_sApp_run(app);
 }

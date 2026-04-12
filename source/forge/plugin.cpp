@@ -1,5 +1,8 @@
 #include "forge/plugin.h"
+#include "forge/hook.h"
 #include "forge/log.h"
+#include "forge/mem.h"
+#include "forge/proc.h"
 #include "forge/types.h"
 #include "nn/crypto.h"
 #include "nn/ro.h"
@@ -34,6 +37,11 @@ struct ShaHash {
     auto operator<=>(const ShaHash& other) const = default;
 };
 
+struct PluginEvents {
+    void (*on_load)();
+    void (*on_update)(float dt);
+};
+
 struct Plugin {
     std::string path;
     AlignedBuffer<PAGE_SIZE> data;
@@ -42,12 +50,26 @@ struct Plugin {
     AlignedBuffer<PAGE_SIZE> bss;
     size_t bss_size;
     ShaHash hash;
-    void (*entrypoint)();
+    PluginEvents events;
+
+    template <typename T>
+    T* getSymbol(const char* name) const
+    {
+        T* symbol;
+        Result r = nn::ro::LookupModuleSymbol((uintptr_t*)&symbol, &this->module, name);
+        if (R_FAILED(r)) {
+            return nullptr;
+        }
+
+        return symbol;
+    }
 };
 
 struct PluginLoader {
     std::vector<Plugin> plugins;
     nn::ro::RegistrationInfo registration_info;
+    Hook update_hook;
+    void (*original_update)(void*);
 };
 
 static PluginLoader s_pluginLoader { };
@@ -82,13 +104,6 @@ AlignedBuffer<Alignment> forge_allocAligned(size_t size)
     return AlignedBuffer<Alignment>(static_cast<u8*>(::operator new[](size, std::align_val_t { Alignment })));
 }
 
-u64 forge_getProgramId()
-{
-    u64 programId;
-    svcGetInfo(&programId, 18, CUR_PROCESS_HANDLE, 0);
-    return programId;
-}
-
 AlignedBuffer<PAGE_SIZE> forge_loadPluginData(const char* path, size_t* out_size)
 {
     FILE* file = fopen(path, "rb");
@@ -109,6 +124,26 @@ AlignedBuffer<PAGE_SIZE> forge_loadPluginData(const char* path, size_t* out_size
     }
 
     return data;
+}
+
+void forge_plugin_onUpdateHook(void* main)
+{
+    s_pluginLoader.original_update(main);
+    const auto delta_time = *(float*)((u8*)main + 0x68);
+
+    for (const auto& plugin : s_pluginLoader.plugins) {
+        if (plugin.events.on_update) {
+            plugin.events.on_update(delta_time);
+        }
+    }
+}
+
+void forge_plugin_init(void)
+{
+    s_pluginLoader.update_hook = forge_hook_create(
+        (void*)(g_mainTextAddr + 0x3DA8FC),
+        (void*)forge_plugin_onUpdateHook,
+        (void**)&s_pluginLoader.original_update);
 }
 
 void forge_plugin_loadPlugins(void)
@@ -175,7 +210,7 @@ void forge_plugin_loadPlugins(void)
     auto nrr_header = (nn::ro::NrrHeader*)nrr_data.get();
     *nrr_header = {
         .magic = 0x3052524E,
-        .program_id = { forge_getProgramId() },
+        .program_id = { forge_proc_getProgramId() },
         .size = nrr_size,
         .type = 0,
         .hashes_offset = sizeof(nn::ro::NrrHeader),
@@ -210,13 +245,17 @@ void forge_plugin_loadPlugins(void)
         }
     }
 
-    for (const auto& plugin : s_pluginLoader.plugins) {
-        r = nn::ro::LookupModuleSymbol((uintptr_t*)&plugin.entrypoint, &plugin.module, "main");
-        if (R_FAILED(r)) {
-            forge_log("Failed to lookup module symbol for plugin %s: 0x%08X", plugin.path.c_str(), r);
+    for (auto& plugin : s_pluginLoader.plugins) {
+        forge_log("Resolving symbols for plugin %s", plugin.path.c_str());
+
+        plugin.events.on_load = plugin.getSymbol<void()>("forge_onLoad");
+        plugin.events.on_update = plugin.getSymbol<void(float)>("forge_onUpdate");
+
+        if (!plugin.events.on_load) {
+            forge_log("Plugin %s does not have a forge_onLoad function, skipping", plugin.path.c_str());
             continue;
         }
 
-        plugin.entrypoint();
+        plugin.events.on_load();
     }
 }

@@ -77,3 +77,10 @@ Handle forge_proc_getHandle()
 
     return s_handle;
 }
+
+u64 forge_proc_getProgramId()
+{
+    u64 programId;
+    svcGetInfo(&programId, 18, CUR_PROCESS_HANDLE, 0);
+    return programId;
+}
