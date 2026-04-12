@@ -2,6 +2,10 @@
 
 #include <switch.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 typedef struct Patch {
     u32 address;
     u32 size;
@@ -15,3 +19,7 @@ void forge_patch_destroy(Patch* patch);
 
 void forge_patch_enable(Patch* patch);
 void forge_patch_disable(Patch* patch);
+
+#ifdef __cplusplus
+}
+#endif
