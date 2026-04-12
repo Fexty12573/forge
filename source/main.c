@@ -1,20 +1,21 @@
 #include "forge/hook.h"
+#include "forge/log.h"
 #include "forge/mem.h"
+#include "forge/plugin.h"
 #include "forge/proc.h"
 #include <stdio.h>
 #include <string.h>
 
-void (*originalAdjustSharpness)(void*, s32, bool) = NULL;
+void (*original_sApp_run)(void*) = NULL;
 
-void adjustSharpness(void* unknown, s32 amount, bool ignoreSkills)
+void sApp_run(void* app)
 {
-    char buffer[256];
-    snprintf(buffer, sizeof(buffer), "Sharpness adjusted by %ld", amount);
-    svcOutputDebugString(buffer, strlen(buffer));
-    originalAdjustSharpness(unknown, amount * 150, ignoreSkills);
+    forge_log("Loading plugins...");
+    forge_plugin_loadPlugins();
+    return original_sApp_run(app);
 }
 
 void forge_main()
 {
-    forge_hook_create((void*)(g_mainTextAddr + 0x2AD288), (void*)(adjustSharpness), (void**)(&originalAdjustSharpness));
+    forge_hook_create((void*)(g_mainTextAddr + 0xB8692C), (void*)(sApp_run), (void**)(&original_sApp_run));
 }

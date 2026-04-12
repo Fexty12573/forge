@@ -7,3 +7,6 @@
 #define R_ERRORONFAIL(r) \
     if (R_FAILED(r))     \
         *((Result*)0x69) = r;
+
+typedef unsigned long ulong;
+typedef unsigned int uint;

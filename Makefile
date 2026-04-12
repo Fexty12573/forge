@@ -20,12 +20,12 @@ TARGET		:=	subsdk
 BUILD		:=	build
 SOURCES 	:= 	source source/forge
 DATA		:=	data
-INCLUDES	:=	include
+INCLUDES	:=	include libs/nnsdk/include
 
 #---------------------------------------------------------------------------------
 # options for code generation
 #---------------------------------------------------------------------------------
-ARCH	:=	-march=armv8-a+crc+crypto -mtune=cortex-a57 -mtp=soft -fPIC -ftls-model=local-exec
+ARCH	:=	-march=armv8-a+crc+crypto -mtune=cortex-a57 -mtp=soft -fPIC -ftls-model=initial-exec
 
 CFLAGS	:=	-g -Wall -Werror \
 			-ffunction-sections \
@@ -35,7 +35,7 @@ CFLAGS	:=	-g -Wall -Werror \
 
 CFLAGS	+=	$(INCLUDE) -D__SWITCH__ -DLIBNX_NO_DEPRECATION
 
-CXXFLAGS	:= $(CFLAGS) -fno-rtti -fomit-frame-pointer -fno-exceptions -fno-asynchronous-unwind-tables -fno-unwind-tables -enable-libstdcxx-allocator=new -fpermissive
+CXXFLAGS	:= $(CFLAGS) -std=c++23 -fno-rtti -fomit-frame-pointer -fno-exceptions -fno-asynchronous-unwind-tables -fno-unwind-tables -enable-libstdcxx-allocator=new -fpermissive
 
 ASFLAGS	:=	-g $(ARCH)
 
