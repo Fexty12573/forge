@@ -24,6 +24,7 @@
  */
 
 #include "forge/hook.h"
+#include "forge/log.h"
 #include "forge/types.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -66,9 +67,7 @@ static int calculateHookLength(uintptr_t addr, bool thumb, int min_length)
 static void* hookFunction(void* const target, void* const detour, Jit* const jit)
 {
     if (!target || !detour) {
-        char buffer[256];
-        snprintf(buffer, sizeof(buffer), "Invalid parameters: target=%p, detour=%p", target, detour);
-        svcOutputDebugString(buffer, strlen(buffer));
+        forge_log("Invalid parameters: target=%p, detour=%p", target, detour);
         return NULL;
     }
 
@@ -156,49 +155,51 @@ static void* hookFunction(void* const target, void* const detour, Jit* const jit
     return NULL;
 }
 
-static Jit trampoline;
-
-void forge_hook_create(void* const target, void* const detour, void** original)
+Hook forge_hook_create(void* const target, void* const detour, void** original)
 {
+    Hook hook = { 0 };
+    hook.target = target;
+    hook.detour = detour;
+
     if (original != NULL) {
-        Result rc = jitCreate(&trampoline, PAGE_SIZE);
+        Result rc = jitCreate(&hook.jit, PAGE_SIZE);
 
         if (R_FAILED(rc)) {
-            const char* str = "Failed to create trampoline";
-            svcOutputDebugString(str, strlen(str));
+            forge_log("Failed to create JIT trampoline: 0x%08X", rc);
             *original = NULL;
-            return;
+            return hook;
         }
 
-        rc = jitTransitionToWritable(&trampoline);
+        rc = jitTransitionToWritable(&hook.jit);
 
         if (R_FAILED(rc)) {
-            const char* str = "Failed to transition trampoline to writable";
-            svcOutputDebugString(str, strlen(str));
-            jitClose(&trampoline);
+            forge_log("Failed to transition trampoline to writable: 0x%08X", rc);
+            jitClose(&hook.jit);
             *original = NULL;
-            return;
+            return hook;
         }
     }
 
-    void* final_trampoline = hookFunction(target, detour, &trampoline);
+    void* final_trampoline = hookFunction(target, detour, &hook.jit);
 
     if (original != NULL) {
         if (final_trampoline != NULL) {
-            Result rc = jitTransitionToExecutable(&trampoline);
+            Result rc = jitTransitionToExecutable(&hook.jit);
 
             if (R_FAILED(rc)) {
-                const char* str = "Failed to transition trampoline to executable";
-                svcOutputDebugString(str, strlen(str));
-                jitClose(&trampoline);
+                forge_log("Failed to transition trampoline to executable: 0x%08X", rc);
+                jitClose(&hook.jit);
                 *original = NULL;
-                return;
+                return hook;
             }
 
             *original = final_trampoline;
+            hook.original = final_trampoline;
         } else {
-            jitClose(&trampoline);
+            jitClose(&hook.jit);
             *original = NULL;
         }
     }
+
+    return hook;
 }
