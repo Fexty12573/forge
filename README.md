@@ -10,18 +10,30 @@ Be sure to check out submodules first:
 git submodule update --init --recursive
 ```
 
-To build the module you'll need:
+To build the module you'll need [devkitPro](https://devkitpro.org/wiki/Getting_Started).
 
-* [devkitPro](https://devkitpro.org/wiki/Getting_Started)
-
-Install devkitARM using pacman:
+Install devkitARM and switch-tools using pacman:
 
 ```sh
 sudo (dkp-)pacman -Sy
 sudo (dkp-)pacman -S devkitARM
+sudo (dkp-)pacman -S switch-tools
 ```
 
 Use `dkp-pacman` on macOS and Debian-based distros and `pacman` otherwise.
+
+Also install the `lz4` package:
+
+```sh
+# On Debian-based distros
+sudo apt install liblz4-dev
+
+# On Arch-based distros
+sudo pacman -S lz4
+
+# On macOS with Homebrew
+brew install lz4
+```
 
 Then you can build the module:
 
