@@ -54,3 +54,28 @@ void forge_mem_init()
     g_mainBssAddr = nextMap(g_mainDataAddr);
     g_mainHeapAddr = nextMapOfType(g_mainBssAddr, MemType_Heap);
 }
+
+u32 forge_mem_getMainTextAddr(void)
+{
+    return g_mainTextAddr;
+}
+
+u32 forge_mem_getMainRodataAddr(void)
+{
+    return g_mainRodataAddr;
+}
+
+u32 forge_mem_getMainDataAddr(void)
+{
+    return g_mainDataAddr;
+}
+
+u32 forge_mem_getMainBssAddr(void)
+{
+    return g_mainBssAddr;
+}
+
+u32 forge_mem_getMainHeapAddr(void)
+{
+    return g_mainHeapAddr;
+}

@@ -2,7 +2,10 @@
     global:
         forge_init;
         forge_fini;
-        forge_hook_create;
+        forge_hook_*;
+        forge_patch_*;
+        forge_mem_get*;
+        forge_log;
 
     local: *;
 };  
