@@ -51,6 +51,7 @@ LIBDIRS	:= $(TOPDIR)/libs/libnx/nx
 
 SWITCH_TOOLS_SRC	:=	$(TOPDIR)/libs/switch-tools/src
 ELF2NSO32			:=	$(TOPDIR)/tools/elf2nso32
+NPDMTOOL			:=	$(TOPDIR)/tools/npdmtool
 
 #---------------------------------------------------------------------------------
 # no real need to edit anything past this point unless you need to add additional
@@ -119,7 +120,12 @@ $(ELF2NSO32): $(SWITCH_TOOLS_SRC)/elf2nso32.c $(SWITCH_TOOLS_SRC)/sha256.c
 	@cc -O2 -I$(SWITCH_TOOLS_SRC) -o $@ $^ -llz4
 	@echo built ... $(notdir $@)
 
-$(BUILD): $(ELF2NSO32)
+$(NPDMTOOL): $(SWITCH_TOOLS_SRC)/npdmtool.c $(SWITCH_TOOLS_SRC)/cJSON.c $(SWITCH_TOOLS_SRC)/cJSON.h
+	@mkdir -p $(dir $@)
+	@cc -O2 -I$(SWITCH_TOOLS_SRC) -o $@ $^
+	@echo built ... $(notdir $@)
+
+$(BUILD): $(ELF2NSO32) $(NPDMTOOL)
 	@$(MAKE) -C $(CURDIR)/libs/libnx/nx -f $(CURDIR)/libs/libnx/nx/Makefile.32_min.mk
 	@[ -d $@ ] || mkdir -p $@
 	@$(MAKE) -C $(BUILD) -f $(CURDIR)/Makefile

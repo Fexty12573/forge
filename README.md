@@ -12,12 +12,11 @@ git submodule update --init --recursive
 
 To build the module you'll need [devkitPro](https://devkitpro.org/wiki/Getting_Started).
 
-Install devkitARM and switch-tools using pacman:
+Install devkitARM using pacman:
 
 ```sh
 sudo (dkp-)pacman -Sy
 sudo (dkp-)pacman -S devkitARM
-sudo (dkp-)pacman -S switch-tools
 ```
 
 Use `dkp-pacman` on macOS and Debian-based distros and `pacman` otherwise.
