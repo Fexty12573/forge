@@ -9,6 +9,7 @@ extern u32 g_mainBssAddr;
 extern u32 g_mainHeapAddr;
 
 void forge_mem_init(void);
+Result forge_mem_queryMemory(MemoryInfo* out_info, u32 addr);
 
 u32 forge_mem_getMainTextAddr(void);
 u32 forge_mem_getMainRodataAddr(void);

@@ -1,23 +1,17 @@
 #include "forge/mem.h"
 
-static Result getMap(MemoryInfo* info, u32 addr)
-{
-    u32 map;
-    return svcQueryMemory(info, &map, addr);
-}
-
 static u32 getMapAddr(u32 addr)
 {
     MemoryInfo map;
-    getMap(&map, addr);
+    forge_mem_queryMemory(&map, addr);
     return map.addr;
 }
 
 static u32 nextMap(u32 addr)
 {
     MemoryInfo map;
-    getMap(&map, addr);
-    getMap(&map, map.addr + map.size);
+    forge_mem_queryMemory(&map, addr);
+    forge_mem_queryMemory(&map, map.addr + map.size);
 
     if (map.type != MemType_Unmapped)
         return map.addr;
@@ -28,8 +22,8 @@ static u32 nextMap(u32 addr)
 static u32 nextMapOfType(u32 addr, u32 type)
 {
     MemoryInfo map;
-    getMap(&map, addr);
-    getMap(&map, map.addr + map.size);
+    forge_mem_queryMemory(&map, addr);
+    forge_mem_queryMemory(&map, map.addr + map.size);
 
     if (map.type == type)
         return map.addr;
@@ -53,6 +47,12 @@ void forge_mem_init()
     g_mainDataAddr = nextMap(g_mainRodataAddr);
     g_mainBssAddr = nextMap(g_mainDataAddr);
     g_mainHeapAddr = nextMapOfType(g_mainBssAddr, MemType_Heap);
+}
+
+Result forge_mem_queryMemory(MemoryInfo* out_info, u32 addr)
+{
+    u32 map;
+    return svcQueryMemory(out_info, &map, addr);
 }
 
 u32 forge_mem_getMainTextAddr(void)
