@@ -1,8 +1,10 @@
 #pragma once
 #ifdef __cplusplus
 
-#include "Mt/MtObject.h"
+#include "Mt/MtDti.h"
 #include "Mt/MtStream.h"
+
+#include <memory>
 
 enum class OpenMode {
     Undefined = 0x10,
@@ -36,6 +38,12 @@ public:
     virtual bool isAsyncReadable() const = 0;
 
     virtual u32 getAsyncTransferredSize() const = 0;
+
+    static inline MtPtr<MtFile> open(const std::string& path, OpenMode mode)
+    {
+        auto file = MtDti::find("MtFile")->createInstance<MtFile>();
+        return file->open(path.c_str(), mode) ? file : nullptr;
+    }
 };
 
 #endif

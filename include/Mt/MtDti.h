@@ -1,11 +1,27 @@
 #pragma once
 #ifdef __cplusplus
 
+#include "Mt/MtCRC.h"
+#include "Mt/MtFunc.h"
+#include "Mt/MtObject.h"
+#include "Mt/MtPtr.h"
 #include "switch/types.h"
 
 #include <string_view>
 
-class MtObject;
+template <std::derived_from<MtObject> T>
+struct MtDeleter {
+    void operator()(T* ptr) const
+    {
+        static_cast<MtObject*>(ptr)->destroy(true);
+    }
+};
+
+template <std::derived_from<MtObject> T>
+MtPtr<T> toMtPtr(MtObject* ptr)
+{
+    return MtPtr<T> { ptr, MtDeleter {} };
+}
 
 class MtDti {
 public:
@@ -24,7 +40,16 @@ public:
     virtual MtObject* instantiate(MtObject* obj) const = 0;
     virtual MtObject* instantiateArray(MtObject* objects, s64 count) const = 0;
 
-    u32 realSize() const { return size << 2; }
+    template <std::derived_from<MtObject> T>
+    MtPtr<T> createInstance() const
+    {
+        return toMtPtr(newInstance());
+    }
+
+    u32 realSize() const
+    {
+        return size << 2;
+    }
 
     bool inheritsFrom(const MtDti* other) const
     {
@@ -69,6 +94,21 @@ public:
         }
 
         return false;
+    }
+
+    static inline u32 makeId(std::string_view name)
+    {
+        return MtCRC::getCRC(name.data(), 0xFFFFFFFF, name.size()) & 0x7FFFFFFF;
+    }
+
+    static inline MtDti* find(u32 id)
+    {
+        return MtFunc::invoke<MtDti*>(0x1177F68, id);
+    }
+
+    static inline MtDti* find(std::string_view name)
+    {
+        return find(makeId(name));
     }
 };
 

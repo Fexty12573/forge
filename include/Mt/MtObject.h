@@ -1,9 +1,11 @@
 #pragma once
 #ifdef __cplusplus
 
-#include "Mt/MtDti.h"
 #include "Mt/MtPropertyList.h"
+#include "Mt/MtPtr.h"
 #include "switch/types.h"
+
+class MtDti;
 
 class MtObject {
 public:
