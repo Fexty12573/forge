@@ -29,6 +29,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <switch/arm/cache.h>
+#include <switch/kernel/svc.h>
 #include <unistd.h>
 
 static bool isThumbMode(uintptr_t addr) { return (addr & 1) != 0; }
@@ -62,6 +64,18 @@ static int calculateHookLength(uintptr_t addr, bool thumb, int min_length)
     }
 
     return length;
+}
+
+static void syncCodeForExecution(void* addr, size_t size)
+{
+    if (!addr || size == 0) {
+        return;
+    }
+
+    armICacheInvalidate(addr, size);
+    armDCacheFlush(addr, size);
+    __asm__ volatile("dsb sy" ::: "memory");
+    __asm__ volatile("isb" ::: "memory");
 }
 
 static void* hookFunction(void* const target, void* const detour, Jit* const jit)
@@ -119,8 +133,7 @@ static void* hookFunction(void* const target, void* const detour, Jit* const jit
             arm_tramp[instruction_count] = 0xE51FF004; // ldr pc, [pc, #-4]
             arm_tramp[instruction_count + 1] = return_addr;
         }
-
-        __builtin___clear_cache((char*)(trampoline), (char*)(trampoline) + total_bytes + 20);
+        syncCodeForExecution(trampoline, (size_t)(total_bytes + 20));
     }
 
     if (thumb_mode) {
@@ -140,7 +153,7 @@ static void* hookFunction(void* const target, void* const detour, Jit* const jit
         code[1] = hook_addr;
     }
 
-    __builtin___clear_cache((char*)(real_target), (char*)(real_target) + total_bytes);
+    syncCodeForExecution((void*)(real_target), (size_t)(total_bytes));
 
     if (trampoline) {
         uintptr_t result_ptr = (uintptr_t)(jit->rx_addr);
