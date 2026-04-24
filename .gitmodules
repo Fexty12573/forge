@@ -4,3 +4,6 @@
 [submodule "libs/switch-tools"]
 	path = libs/switch-tools
 	url = https://github.com/Fexty12573/switch-tools
+[submodule "libs/iniparser"]
+	path = libs/iniparser
+	url = https://github.com/ndevilla/iniparser

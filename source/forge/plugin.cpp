@@ -150,13 +150,13 @@ void forge_plugin_loadPlugins(void)
 {
     DIR* dir = opendir("app:/nativeNX/plugins");
     if (dir == NULL) {
-        forge_log("Failed to open nativeNX/plugins");
+        forge_log_error("Failed to open nativeNX/plugins");
         return;
     }
 
     Result r = nn::ro::Initialize();
     if (R_FAILED(r)) {
-        forge_log("Failed to initialize ro: 0x%08X", r);
+        forge_log_error("Failed to initialize ro: 0x%08X", r);
         closedir(dir);
         return;
     }
@@ -169,27 +169,27 @@ void forge_plugin_loadPlugins(void)
             char path[512];
             snprintf(path, sizeof(path), "app:/nativeNX/plugins/%s", entry->d_name);
 
-            forge_log("Found plugin file: %s", path);
+            forge_log_debug("Found plugin file: %s", path);
 
             Plugin plugin;
             plugin.path = path;
 
             plugin.data = forge_loadPluginData(path, &plugin.data_size);
             if (plugin.data == nullptr) {
-                forge_log("Failed to read plugin file %s", path);
+                forge_log_error("Failed to read plugin file %s", path);
                 continue;
             }
 
             const auto nro_header = (nn::ro::NroHeader*)plugin.data.get();
             if (nro_header->magic != 0x304F524E) {
-                forge_log("Invalid NRO file: %s", path);
-                forge_log("Expected magic 0x304F524E, got 0x%08X", nro_header->magic);
+                forge_log_error("Invalid NRO file: %s", path);
+                forge_log_error("Expected magic 0x304F524E, got 0x%08X", nro_header->magic);
                 continue;
             }
 
             r = nn::ro::GetBufferSize(&plugin.bss_size, plugin.data.get());
             if (R_FAILED(r)) {
-                forge_log("Failed to get BSS size for plugin %s: 0x%08X", path, r);
+                forge_log_error("Failed to get BSS size for plugin %s: 0x%08X", path, r);
                 continue;
             }
 
@@ -202,7 +202,7 @@ void forge_plugin_loadPlugins(void)
 
     closedir(dir);
 
-    forge_log("Preparing to load %zu plugins", s_pluginLoader.plugins.size());
+    forge_log_debug("Preparing to load %zu plugins", s_pluginLoader.plugins.size());
 
     const auto nrr_size = forge_alignUp(sizeof(nn::ro::NrrHeader) + s_pluginLoader.plugins.size() * sizeof(ShaHash), PAGE_SIZE);
     AlignedBuffer<PAGE_SIZE> nrr_data = forge_allocAligned<PAGE_SIZE>(nrr_size);
@@ -225,12 +225,12 @@ void forge_plugin_loadPlugins(void)
 
     r = nn::ro::RegisterModuleInfo(&s_pluginLoader.registration_info, nrr_data.get());
     if (R_FAILED(r)) {
-        forge_log("Failed to register module info: 0x%08X", r);
+        forge_log_error("Failed to register module info: 0x%08X", r);
         return;
     }
 
     for (auto& plugin : s_pluginLoader.plugins) {
-        forge_log("Loading plugin %s", plugin.path.c_str());
+        forge_log_info("Loading plugin %s", plugin.path.c_str());
 
         plugin.bss = forge_allocAligned<PAGE_SIZE>(plugin.bss_size);
         r = nn::ro::LoadModule(
@@ -240,19 +240,19 @@ void forge_plugin_loadPlugins(void)
             plugin.bss_size,
             nn::ro::BindFlag_Now);
         if (R_FAILED(r)) {
-            forge_log("Failed to load plugin %s: 0x%08X", plugin.path.c_str(), r);
+            forge_log_error("Failed to load plugin %s: 0x%08X", plugin.path.c_str(), r);
             continue;
         }
     }
 
     for (auto& plugin : s_pluginLoader.plugins) {
-        forge_log("Resolving symbols for plugin %s", plugin.path.c_str());
+        forge_log_debug("Resolving symbols for plugin %s", plugin.path.c_str());
 
         plugin.events.on_load = plugin.getSymbol<void()>("forge_onLoad");
         plugin.events.on_update = plugin.getSymbol<void(float)>("forge_onUpdate");
 
         if (!plugin.events.on_load) {
-            forge_log("Plugin %s does not have a forge_onLoad function, skipping", plugin.path.c_str());
+            forge_log_warn("Plugin %s does not have a forge_onLoad function, skipping", plugin.path.c_str());
             continue;
         }
 

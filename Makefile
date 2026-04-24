@@ -20,7 +20,11 @@ TARGET		:=	subsdk
 BUILD		:=	build
 SOURCES 	:= 	source source/forge
 DATA		:=	data
-INCLUDES	:=	include libs/nnsdk/include
+INCLUDES	:=	include libs/nnsdk/include libs/iniparser/src
+
+INIPARSER_DIR	:=	$(TOPDIR)/libs/iniparser/src
+INIPARSER_BUILD	:=	$(TOPDIR)/$(BUILD)/iniparser
+INIPARSER_LIB	:=	$(INIPARSER_BUILD)/libiniparser.a
 
 #---------------------------------------------------------------------------------
 # options for code generation
@@ -41,7 +45,7 @@ ASFLAGS	:=	-g $(ARCH)
 
 LDFLAGS  =  -specs=$(TOPDIR)/switch32.specs -g $(ARCH) -Wl,-Map,$(notdir $*.map) -Wl,--version-script=$(TOPDIR)/exported.txt -Wl,-init=forge_init -Wl,-fini=forge_fini -Wl,--export-dynamic -nodefaultlibs
 
-LIBS	:= -lgcc -lstdc++ -u malloc -lnx32_min
+LIBS	:= -liniparser -lgcc -lstdc++ -u malloc -lnx32_min
 
 #---------------------------------------------------------------------------------
 # list of directories containing libraries, this must be the top level containing
@@ -94,7 +98,8 @@ export INCLUDE	:=	$(foreach dir,$(INCLUDES),-I$(CURDIR)/$(dir)) \
 			$(foreach dir,$(LIBDIRS),-I$(dir)/include) \
 			-I$(CURDIR)/$(BUILD)
 
-export LIBPATHS	:=	$(foreach dir,$(LIBDIRS),-L$(dir)/lib)
+export LIBPATHS	:=	$(foreach dir,$(LIBDIRS),-L$(dir)/lib) \
+			-L$(INIPARSER_BUILD)
 
 ifeq ($(strip $(CONFIG_JSON)),)
 	jsons := $(wildcard *.json)
@@ -141,6 +146,7 @@ else
 .PHONY:	all
 
 DEPENDS	:=	$(OFILES:.o=.d)
+INIPARSER_OBJS	:=	$(INIPARSER_BUILD)/iniparser.o $(INIPARSER_BUILD)/dictionary.o
 
 #---------------------------------------------------------------------------------
 # main targets
@@ -149,9 +155,18 @@ all	: $(OUTPUT).nso
 
 $(OUTPUT).nso	:	$(OUTPUT).elf $(TOPDIR)/main.npdm
 
-$(OUTPUT).elf	:	$(OFILES)
+$(OUTPUT).elf	:	$(OFILES) $(INIPARSER_LIB)
 
 $(OFILES_SRC)	: $(HFILES_BIN)
+
+$(INIPARSER_LIB): $(INIPARSER_OBJS)
+	@echo archiving $(notdir $@)
+	@$(AR) rcs $@ $^
+
+$(INIPARSER_BUILD)/%.o: $(INIPARSER_DIR)/%.c
+	@[ -d $(dir $@) ] || mkdir -p $(dir $@)
+	@echo $(notdir $<)
+	@$(CC) $(filter-out -Werror,$(CFLAGS)) -I$(INIPARSER_DIR) -c $< -o $@
 
 #---------------------------------------------------------------------------------
 # you need a rule like this for each extension you use as binary data

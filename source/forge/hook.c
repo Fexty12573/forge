@@ -81,7 +81,7 @@ static void syncCodeForExecution(void* addr, size_t size)
 static void* hookFunction(void* const target, void* const detour, Jit* const jit)
 {
     if (!target || !detour) {
-        forge_log("Invalid parameters: target=%p, detour=%p", target, detour);
+        forge_log_error("Invalid parameters: target=%p, detour=%p", target, detour);
         return NULL;
     }
 
@@ -178,7 +178,7 @@ Hook forge_hook_create(void* const target, void* const detour, void** original)
         Result rc = jitCreate(&hook.jit, PAGE_SIZE);
 
         if (R_FAILED(rc)) {
-            forge_log("Failed to create JIT trampoline: 0x%08X", rc);
+            forge_log_error("Failed to create JIT trampoline: 0x%08X", rc);
             *original = NULL;
             return hook;
         }
@@ -186,7 +186,7 @@ Hook forge_hook_create(void* const target, void* const detour, void** original)
         rc = jitTransitionToWritable(&hook.jit);
 
         if (R_FAILED(rc)) {
-            forge_log("Failed to transition trampoline to writable: 0x%08X", rc);
+            forge_log_error("Failed to transition trampoline to writable: 0x%08X", rc);
             jitClose(&hook.jit);
             *original = NULL;
             return hook;
@@ -200,7 +200,7 @@ Hook forge_hook_create(void* const target, void* const detour, void** original)
             Result rc = jitTransitionToExecutable(&hook.jit);
 
             if (R_FAILED(rc)) {
-                forge_log("Failed to transition trampoline to executable: 0x%08X", rc);
+                forge_log_error("Failed to transition trampoline to executable: 0x%08X", rc);
                 jitClose(&hook.jit);
                 *original = NULL;
                 return hook;
