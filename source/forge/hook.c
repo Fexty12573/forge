@@ -347,3 +347,29 @@ Hook forge_hook_createWithContext(void* const target, void* const detour, void**
 
     return hook;
 }
+
+Result forge_hook_updateContext(Hook* hook, void* new_ctx)
+{
+    if (!hook->has_ctx) {
+        return MAKERESULT(Module_Libnx, LibnxError_BadInput);
+    }
+
+    Result rc = jitTransitionToWritable(&hook->ctx_jit);
+    if (R_FAILED(rc)) {
+        forge_log_error("Failed to transition JIT to writable: 0x%08X", rc);
+        return rc;
+    }
+
+    uint32_t* buffer = hook->ctx_jit.rw_addr;
+    buffer[6] = (uint32_t)(uintptr_t)new_ctx;
+
+    syncCodeForExecution(buffer, 36);
+
+    rc = jitTransitionToExecutable(&hook->ctx_jit);
+    if (R_FAILED(rc)) {
+        forge_log_error("Failed to transition JIT to executable: 0x%08X", rc);
+        return rc;
+    }
+
+    return 0;
+}
