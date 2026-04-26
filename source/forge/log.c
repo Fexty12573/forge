@@ -1,6 +1,5 @@
 #include "forge/log.h"
 
-#include <ctype.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <string.h>
@@ -11,7 +10,8 @@ static enum LogLevel s_logLevel = LOG_LEVEL_ERROR;
 bool stricmp(const char* a, const char* b)
 {
     while (*a && *b) {
-        if (tolower((unsigned char)*a) != tolower((unsigned char)*b)) {
+        unsigned char ca = *a, cb = *b;
+        if ((ca >= 'A' && ca <= 'Z' ? ca + 32 : ca) != (cb >= 'A' && cb <= 'Z' ? cb + 32 : cb)) {
             return false;
         }
 

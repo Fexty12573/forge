@@ -18,6 +18,15 @@ char* strdup(const char* str)
     return copy;
 }
 
+Config forge_config_createDefault(void)
+{
+    Config cfg = {
+        .log_level = "info"
+    };
+
+    return cfg;
+}
+
 Result forge_config_load(Config* out_config)
 {
     if (!out_config) {
