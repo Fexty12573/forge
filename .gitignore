@@ -349,3 +349,6 @@ $RECYCLE.BIN/
 *.lnk
 
 # End of https://www.toptal.com/developers/gitignore/api/cmake,linux,macos,windows,visualstudiocode,python,c,c++,assembler
+
+# forge version file
+version.h

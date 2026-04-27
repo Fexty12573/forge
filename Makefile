@@ -58,6 +58,26 @@ ELF2NSO32			:=	$(TOPDIR)/tools/elf2nso32
 NPDMTOOL			:=	$(TOPDIR)/tools/npdmtool
 
 #---------------------------------------------------------------------------------
+# version derived from latest git tag + short commit hash when not at tag
+#---------------------------------------------------------------------------------
+GIT_TAG			:=	$(shell git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
+GIT_COMMIT		:=	$(shell git rev-parse --short HEAD 2>/dev/null || echo "unknown")
+GIT_EXACT		:=	$(shell git describe --exact-match --tags HEAD >/dev/null 2>&1 && echo 1 || echo 0)
+
+VERSION_TAG		:=	$(patsubst v%,%,$(GIT_TAG))
+VERSION_MAJOR	:=	$(word 1,$(subst ., ,$(VERSION_TAG)))
+VERSION_MINOR	:=	$(word 2,$(subst ., ,$(VERSION_TAG)))
+VERSION_PATCH	:=	$(word 3,$(subst ., ,$(VERSION_TAG)))
+
+ifeq ($(GIT_EXACT),1)
+FORGE_VERSION	:=	$(VERSION_TAG)
+else
+FORGE_VERSION	:=	$(VERSION_TAG)-g$(GIT_COMMIT)
+endif
+
+VERSION_HEADER	:=	$(BUILD)/forge/version.h
+
+#---------------------------------------------------------------------------------
 # no real need to edit anything past this point unless you need to add additional
 # rules for different file extensions
 #---------------------------------------------------------------------------------
@@ -130,7 +150,19 @@ $(NPDMTOOL): $(SWITCH_TOOLS_SRC)/npdmtool.c $(SWITCH_TOOLS_SRC)/cJSON.c $(SWITCH
 	@cc -O2 -I$(SWITCH_TOOLS_SRC) -o $@ $^
 	@echo built ... $(notdir $@)
 
-$(BUILD): $(ELF2NSO32) $(NPDMTOOL)
+$(VERSION_HEADER): $(TOPDIR)/include/forge/version.h.in
+	@mkdir -p $(dir $@)
+	@sed \
+		-e 's|@FORGE_VERSION@|$(FORGE_VERSION)|g' \
+		-e 's|@FORGE_VERSION_MAJOR@|$(VERSION_MAJOR)|g' \
+		-e 's|@FORGE_VERSION_MINOR@|$(VERSION_MINOR)|g' \
+		-e 's|@FORGE_VERSION_PATCH@|$(VERSION_PATCH)|g' \
+		-e 's|@FORGE_VERSION_COMMIT@|$(GIT_COMMIT)|g' \
+		-e 's|@FORGE_VERSION_IS_RELEASE@|$(GIT_EXACT)|g' \
+		$< > $@
+	@echo generated ... $(notdir $@)
+
+$(BUILD): $(ELF2NSO32) $(NPDMTOOL) $(VERSION_HEADER)
 	@$(MAKE) -C $(CURDIR)/libs/libnx/nx -f $(CURDIR)/libs/libnx/nx/Makefile.32_min.mk
 	@[ -d $@ ] || mkdir -p $@
 	@$(MAKE) -C $(BUILD) -f $(CURDIR)/Makefile
@@ -157,7 +189,7 @@ $(OUTPUT).nso	:	$(OUTPUT).elf $(TOPDIR)/main.npdm
 
 $(OUTPUT).elf	:	$(OFILES) $(INIPARSER_LIB)
 
-$(OFILES_SRC)	: $(HFILES_BIN)
+$(OFILES_SRC)	: $(HFILES_BIN) $(TOPDIR)/$(BUILD)/forge/version.h
 
 $(INIPARSER_LIB): $(INIPARSER_OBJS)
 	@echo archiving $(notdir $@)

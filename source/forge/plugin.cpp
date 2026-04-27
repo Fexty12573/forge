@@ -4,6 +4,7 @@
 #include "forge/mem.h"
 #include "forge/proc.h"
 #include "forge/types.h"
+#include "forge/version.h"
 #include "nn/crypto.h"
 #include "nn/ro.h"
 
@@ -37,8 +38,20 @@ struct ShaHash {
     auto operator<=>(const ShaHash& other) const = default;
 };
 
+struct ForgeVersion {
+    u16 major;
+    u16 minor;
+    u16 patch;
+
+    auto operator<=>(const ForgeVersion& other) const = default;
+};
+
+struct PluginInitParam {
+    ForgeVersion required_ver;
+};
+
 struct PluginEvents {
-    void (*on_load)();
+    void (*on_load)(PluginInitParam* out_param);
     void (*on_update)(float dt);
 };
 
@@ -51,6 +64,7 @@ struct Plugin {
     size_t bss_size;
     ShaHash hash;
     PluginEvents events;
+    PluginInitParam param;
 
     template <typename T>
     T* getSymbol(const char* name) const
@@ -72,7 +86,13 @@ struct PluginLoader {
     void (*original_update)(void*);
 };
 
-static PluginLoader s_pluginLoader { };
+static constexpr ForgeVersion s_loaderVersion = {
+    .major = FORGE_VERSION_MAJOR,
+    .minor = FORGE_VERSION_MINOR,
+    .patch = FORGE_VERSION_PATCH,
+};
+
+static PluginLoader s_pluginLoader {};
 
 struct dirent64 {
     u64 d_ino;
@@ -245,10 +265,11 @@ void forge_plugin_loadPlugins(void)
         }
     }
 
+    std::set<ShaHash> to_remove;
     for (auto& plugin : s_pluginLoader.plugins) {
         forge_log_debug("Resolving symbols for plugin %s", plugin.path.c_str());
 
-        plugin.events.on_load = plugin.getSymbol<void()>("forge_onLoad");
+        plugin.events.on_load = plugin.getSymbol<void(PluginInitParam*)>("forge_onLoad");
         plugin.events.on_update = plugin.getSymbol<void(float)>("forge_onUpdate");
 
         if (!plugin.events.on_load) {
@@ -256,6 +277,29 @@ void forge_plugin_loadPlugins(void)
             continue;
         }
 
-        plugin.events.on_load();
+        plugin.events.on_load(&plugin.param);
+
+        if (plugin.param.required_ver > s_loaderVersion) {
+            forge_log_error("Plugin %s requires Forge version %u.%u.%u, but loader is version %u.%u.%u",
+                plugin.path.c_str(),
+                plugin.param.required_ver.major,
+                plugin.param.required_ver.minor,
+                plugin.param.required_ver.patch,
+                s_loaderVersion.major,
+                s_loaderVersion.minor,
+                s_loaderVersion.patch);
+
+            to_remove.insert(plugin.hash);
+            r = nn::ro::UnloadModule(&plugin.module);
+            if (R_FAILED(r)) {
+                forge_log_error("Failed to unload plugin %s: 0x%08X", plugin.path.c_str(), r);
+            }
+
+            continue;
+        }
     }
+
+    std::erase_if(s_pluginLoader.plugins, [&to_remove](const Plugin& plugin) {
+        return to_remove.contains(plugin.hash);
+    });
 }

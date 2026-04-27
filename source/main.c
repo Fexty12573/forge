@@ -4,6 +4,7 @@
 #include "forge/mem.h"
 #include "forge/plugin.h"
 #include "forge/proc.h"
+#include "forge/version.h"
 #include <stdio.h>
 #include <string.h>
 
@@ -28,6 +29,11 @@ void sApp_run(void* app)
 void forge_main()
 {
     forge_log_trace("[forge] Initializing Forge...");
+    forge_log_trace("[forge] Version %s", FORGE_VERSION);
+
+    if (!FORGE_VERSION_IS_RELEASE) {
+        forge_log_trace("[WARN] [forge] Running a non-release build, expect instability and crashes");
+    }
 
     const Result r = forge_hook_init();
     if (R_FAILED(r)) {
