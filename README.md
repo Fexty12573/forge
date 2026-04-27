@@ -2,6 +2,9 @@
 
 An environment for linking, runtime hooking and code patching in Monster Hunter Generations Ultimate.
 
+## Installing
+Download the latest release from the [releases page](https://github.com/Fexty12573/forge/releases) and extract the contents of the zip archive to your mod directory.
+
 ## Building
 
 Be sure to check out submodules first:
