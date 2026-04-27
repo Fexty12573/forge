@@ -150,7 +150,7 @@ $(NPDMTOOL): $(SWITCH_TOOLS_SRC)/npdmtool.c $(SWITCH_TOOLS_SRC)/cJSON.c $(SWITCH
 	@cc -O2 -I$(SWITCH_TOOLS_SRC) -o $@ $^
 	@echo built ... $(notdir $@)
 
-$(VERSION_HEADER): $(TOPDIR)/include/forge/version.h.in
+$(VERSION_HEADER): $(TOPDIR)/data/version.h.in
 	@mkdir -p $(dir $@)
 	@sed \
 		-e 's|@FORGE_VERSION@|$(FORGE_VERSION)|g' \

@@ -1,0 +1,41 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build:
+    uses: ./.github/workflows/build.yml
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Download artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: forge-build-${{ github.sha }}
+          path: artifact
+
+      - name: Package release zip
+        run: |
+          mkdir -p forge/exefs forge/romfs/nativeNX/forge
+          cp artifact/subsdk.nso        forge/exefs/subsdk9
+          cp artifact/main.npdm         forge/exefs/main.npdm
+          cp artifact/data/config.ini   forge/romfs/nativeNX/forge/config.ini
+          zip -r forge-${{ github.ref_name }}.zip forge/
+
+      - name: Create GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          gh release create ${{ github.ref_name }} \
+            --title "Forge ${{ github.ref_name }}" \
+            --generate-notes \
+            forge-${{ github.ref_name }}.zip
