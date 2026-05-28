@@ -4,6 +4,7 @@
         forge_fini;
         forge_hook_*;
         forge_patch_*;
+        forge_socket_*;
         forge_mem_get*;
         forge_log;
         forge_log_getLevel;

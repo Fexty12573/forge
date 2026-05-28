@@ -20,7 +20,7 @@ TARGET		:=	subsdk
 BUILD		:=	build
 SOURCES 	:= 	source source/forge
 DATA		:=	data
-INCLUDES	:=	include libs/nnsdk/include libs/iniparser/src
+INCLUDES	:=	include libs/nnsdk/include libs/iniparser/src libs/libnx/nx/external/bsd/include
 
 INIPARSER_DIR	:=	$(TOPDIR)/libs/iniparser/src
 INIPARSER_BUILD	:=	$(TOPDIR)/$(BUILD)/iniparser

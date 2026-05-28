@@ -4,6 +4,7 @@
 #include "forge/mem.h"
 #include "forge/plugin.h"
 #include "forge/proc.h"
+#include "forge/socket.h"
 #include "forge/version.h"
 #include <stdio.h>
 #include <string.h>
@@ -33,6 +34,11 @@ void forge_main()
 
     if (!FORGE_VERSION_IS_RELEASE) {
         forge_log_trace("[WARN] [forge] Running a non-release build, expect instability and crashes");
+    }
+
+    const int result = forge_socket_initDefault();
+    if (result != 0) {
+        forge_log_trace("[forge] Failed to initialize socket library: 0x%X", result);
     }
 
     const Result r = forge_hook_init();
