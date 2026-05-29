@@ -63,6 +63,7 @@ struct PluginInitParam {
 
 struct PluginEvents {
     void (*on_load)(PluginInitParam* out_param);
+    void (*on_init)();
     void (*on_update)(float dt);
 };
 
@@ -281,6 +282,7 @@ void forge_plugin_loadPlugins(void)
         forge_log_debug("Resolving symbols for plugin %s", plugin.path.c_str());
 
         plugin.events.on_load = plugin.getSymbol<void(PluginInitParam*)>("forge_onLoad");
+        plugin.events.on_init = plugin.getSymbol<void()>("forge_onInit");
         plugin.events.on_update = plugin.getSymbol<void(float)>("forge_onUpdate");
 
         if (!plugin.events.on_load) {
@@ -308,6 +310,8 @@ void forge_plugin_loadPlugins(void)
 
             continue;
         }
+
+        plugin.events.on_init();
     }
 
     std::erase_if(s_pluginLoader.plugins, [&to_remove](const Plugin& plugin) {

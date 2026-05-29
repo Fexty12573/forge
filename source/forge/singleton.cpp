@@ -77,7 +77,7 @@ extern "C" void* forge_singleton_getInstanceById(u32 id)
     return nullptr;
 }
 
-u32 forge_singleton_getAllInstances(void** out, u32 max)
+extern "C" u32 forge_singleton_getAllInstances(void** out, u32 max)
 {
     if (out == nullptr) {
         return s_singletonMap.size();
