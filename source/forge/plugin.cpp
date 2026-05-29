@@ -43,7 +43,18 @@ struct ForgeVersion {
     u16 minor;
     u16 patch;
 
-    auto operator<=>(const ForgeVersion& other) const = default;
+    bool satisfies(const ForgeVersion& other) const
+    {
+        if (this->major < other.major) {
+            return false;
+        }
+
+        if (this->major == other.major && this->minor < other.minor) {
+            return false;
+        }
+
+        return true;
+    }
 };
 
 struct PluginInitParam {
@@ -92,7 +103,7 @@ static constexpr ForgeVersion s_loaderVersion = {
     .patch = FORGE_VERSION_PATCH,
 };
 
-static PluginLoader s_pluginLoader {};
+static PluginLoader s_pluginLoader { };
 
 struct dirent64 {
     u64 d_ino;
@@ -279,8 +290,8 @@ void forge_plugin_loadPlugins(void)
 
         plugin.events.on_load(&plugin.param);
 
-        if (plugin.param.required_ver > s_loaderVersion) {
-            forge_log_error("Plugin %s requires Forge version %u.%u.%u, but loader is version %u.%u.%u",
+        if (!s_loaderVersion.satisfies(plugin.param.required_ver)) {
+            forge_log_error("Plugin %s requires Forge version %u.%u.*, but loader is version %u.%u.%u",
                 plugin.path.c_str(),
                 plugin.param.required_ver.major,
                 plugin.param.required_ver.minor,
