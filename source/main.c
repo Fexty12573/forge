@@ -4,6 +4,7 @@
 #include "forge/mem.h"
 #include "forge/plugin.h"
 #include "forge/proc.h"
+#include "forge/singleton.h"
 #include "forge/socket.h"
 #include "forge/version.h"
 #include <stdio.h>
@@ -19,6 +20,7 @@ void sApp_run(void* app)
     }
 
     forge_log_init(&config);
+    forge_singleton_resolve();
 
     forge_log_info("[forge] Loading plugins...");
     forge_plugin_init();
@@ -46,6 +48,8 @@ void forge_main()
         forge_log_trace("[forge] Failed to initialize hooking API: 0x%08X", r);
         return;
     }
+
+    forge_singleton_init();
 
     forge_hook_create((void*)(g_mainTextAddr + 0xB8692C), (void*)(sApp_run), (void**)(&original_sApp_run));
 }

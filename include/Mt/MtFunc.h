@@ -16,7 +16,7 @@ inline F* get(u32 offset)
 template <typename Ret, typename... Args>
 inline Ret invoke(u32 offset, Args... args)
 {
-    return get<Ret(Args)>(offset)(args...);
+    return get<Ret(Args...)>(offset)(args...);
 }
 }
 

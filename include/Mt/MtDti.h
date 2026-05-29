@@ -13,17 +13,20 @@ template <std::derived_from<MtObject> T>
 struct MtDeleter {
     void operator()(T* ptr) const
     {
-        static_cast<MtObject*>(ptr)->destroy(true);
+        // `delete` dispatches virtually to the deleting destructor (D0, vtable
+        // slot +0x04), which both destructs the object and frees it with the
+        // game's allocator -- i.e. exactly what the old `destroy()` slot did.
+        delete static_cast<MtObject*>(ptr);
     }
 };
 
 template <std::derived_from<MtObject> T>
 MtPtr<T> toMtPtr(MtObject* ptr)
 {
-    return MtPtr<T> { ptr, MtDeleter {} };
+    return MtPtr<T> { ptr, MtDeleter<T> { } };
 }
 
-class MtDti {
+class __packed MtDti {
 public:
     const char* name;
     class MtDti* next;
@@ -43,7 +46,7 @@ public:
     template <std::derived_from<MtObject> T>
     MtPtr<T> createInstance() const
     {
-        return toMtPtr(newInstance());
+        return toMtPtr<T>(newInstance());
     }
 
     u32 realSize() const
@@ -111,5 +114,7 @@ public:
         return find(makeId(name));
     }
 };
+
+static_assert(sizeof(MtDti) == 0x20, "");
 
 #endif
