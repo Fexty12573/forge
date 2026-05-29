@@ -311,7 +311,10 @@ void forge_plugin_loadPlugins(void)
             continue;
         }
 
-        plugin.events.on_init();
+        if (plugin.events.on_init) {
+            forge_log_debug("Initializing plugin %s", plugin.path.c_str());
+            plugin.events.on_init();
+        }
     }
 
     std::erase_if(s_pluginLoader.plugins, [&to_remove](const Plugin& plugin) {
