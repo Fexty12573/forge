@@ -4,6 +4,9 @@
 #include "forge/nn/ro.h"
 
 #include <nvn/nvn.h>
+#include <nvn/nvn_Cpp.h>
+#include <nvn/nvn_CppFuncPtrBase.h>
+#include <nvn/nvn_CppMethods.h>
 
 #include <memory>
 #include <string_view>
@@ -35,26 +38,30 @@ public:
 
     void setDevice(NVNdevice* device)
     {
-        m_device = device;
+        m_device = (nvn::Device*)device;
     }
 
     void setQueue(NVNqueue* queue)
     {
-        m_queue = queue;
+        m_queue = (nvn::Queue*)queue;
     }
 
     void setSwapChainTextures(NVNtexture* const* textures, int numTextures)
     {
         m_swapChainTextures.clear();
         for (int i = 0; i < numTextures; i++) {
-            m_swapChainTextures.push_back(textures[i]);
+            m_swapChainTextures.push_back((nvn::Texture*)textures[i]);
         }
     }
 
+    void initialize();
+    bool isInitialized() const { return m_initialized; }
+
 private:
-    NVNdevice* m_device;
-    NVNqueue* m_queue;
-    std::vector<NVNtexture*> m_swapChainTextures;
+    nvn::Device* m_device { nullptr };
+    nvn::Queue* m_queue { nullptr };
+    std::vector<nvn::Texture*> m_swapChainTextures { };
+    bool m_initialized { false };
 
     static inline Graphics* s_instance = nullptr;
 };
@@ -150,9 +157,20 @@ void customWindowBuilderSetTextures(NVNwindowBuilder* builder, int numTextures, 
 
 void customQueuePresentTexture(NVNqueue* queue, NVNwindow* window, int textureIndex)
 {
+    auto gfx = Graphics::get();
+
     // The present queue is the one we must submit our overlay on; it is
     // authoritative here regardless of how many queues the game created.
-    Graphics::get()->setQueue(queue);
+    gfx->setQueue(queue);
+
+    if (!gfx->isInitialized()) {
+        gfx->initialize();
+    }
 
     return s_defaultNvnQueuePresentTexture(queue, window, textureIndex);
+}
+
+void Graphics::initialize()
+{
+    nvn::nvnLoadCPPProcs(m_device, (nvn::DeviceGetProcAddressFunc)s_defaultNvnGetProcAddress);
 }
