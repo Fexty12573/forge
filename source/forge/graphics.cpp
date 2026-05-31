@@ -5,16 +5,59 @@
 
 #include <nvn/nvn.h>
 
+#include <memory>
 #include <string_view>
+#include <vector>
 
 static Hook s_nvnBoostrapperLoaderHook;
 static PFNNVNGENERICFUNCPTRPROC (*s_originalNvnBootstrapLoader)(const char*) = nullptr;
 static PFNNVNDEVICEGETPROCADDRESSPROC s_defaultNvnGetProcAddress = nullptr;
 static PFNNVNDEVICEINITIALIZEPROC s_defaultNvnDeviceInitialize = nullptr;
+static PFNNVNQUEUEINITIALIZEPROC s_defaultNvnQueueInitialize = nullptr;
+static PFNNVNWINDOWBUILDERSETTEXTURESPROC s_defaultNvnWindowBuilderSetTextures = nullptr;
+static PFNNVNQUEUEPRESENTTEXTUREPROC s_defaultNvnQueuePresentTexture = nullptr;
 
 static void* nvnBootstrapLoaderHook(const char* name);
 static void* customDeviceGetProcAddress(const NVNdevice* device, const char* name);
-static NVNboolean customDeviceInitialize(NVNdevice* device, NVNdeviceBuilder* builder);
+static NVNboolean customDeviceInitialize(NVNdevice* device, const NVNdeviceBuilder* builder);
+static NVNboolean customQueueInitialize(NVNqueue* queue, const NVNqueueBuilder* builder);
+static void customWindowBuilderSetTextures(NVNwindowBuilder* builder, int numTextures, NVNtexture* const* textures);
+static void customQueuePresentTexture(NVNqueue* queue, NVNwindow* window, int textureIndex);
+
+class Graphics {
+public:
+    static Graphics* get() { return s_instance; }
+
+    static void createInstance()
+    {
+        s_instance = new Graphics;
+    }
+
+    void setDevice(NVNdevice* device)
+    {
+        m_device = device;
+    }
+
+    void setQueue(NVNqueue* queue)
+    {
+        m_queue = queue;
+    }
+
+    void setSwapChainTextures(NVNtexture* const* textures, int numTextures)
+    {
+        m_swapChainTextures.clear();
+        for (int i = 0; i < numTextures; i++) {
+            m_swapChainTextures.push_back(textures[i]);
+        }
+    }
+
+private:
+    NVNdevice* m_device;
+    NVNqueue* m_queue;
+    std::vector<NVNtexture*> m_swapChainTextures;
+
+    static inline Graphics* s_instance = nullptr;
+};
 
 extern "C" bool forge_graphics_init(void)
 {
@@ -34,6 +77,8 @@ extern "C" bool forge_graphics_init(void)
     if (s_originalNvnBootstrapLoader == NULL) {
         return false;
     }
+
+    Graphics::createInstance();
 
     return true;
 }
@@ -60,16 +105,54 @@ void* customDeviceGetProcAddress(const NVNdevice* device, const char* name)
     const auto result = s_defaultNvnGetProcAddress(device, name);
 
     if (name == "nvnDeviceInitialize"sv) {
-        forge_log_trace("[forge] nvnDeviceInitialize requested");
         s_defaultNvnDeviceInitialize = (PFNNVNDEVICEINITIALIZEPROC)result;
         return (void*)customDeviceInitialize;
+    } else if (name == "nvnQueueInitialize"sv) {
+        s_defaultNvnQueueInitialize = (PFNNVNQUEUEINITIALIZEPROC)result;
+        return (void*)customQueueInitialize;
+    } else if (name == "nvnWindowBuilderSetTextures"sv) {
+        s_defaultNvnWindowBuilderSetTextures = (PFNNVNWINDOWBUILDERSETTEXTURESPROC)result;
+        return (void*)customWindowBuilderSetTextures;
+    } else if (name == "nvnQueuePresentTexture"sv) {
+        s_defaultNvnQueuePresentTexture = (PFNNVNQUEUEPRESENTTEXTUREPROC)result;
+        return (void*)customQueuePresentTexture;
     }
 
     return (void*)result;
 }
 
-NVNboolean customDeviceInitialize(NVNdevice* device, NVNdeviceBuilder* builder)
+NVNboolean customDeviceInitialize(NVNdevice* device, const NVNdeviceBuilder* builder)
 {
-    forge_log_trace("[forge] nvnDeviceInitialize called");
+    forge_log_trace("[forge] Obtained NVNdevice");
+
+    Graphics::get()->setDevice(device);
+
     return s_defaultNvnDeviceInitialize(device, builder);
+}
+
+NVNboolean customQueueInitialize(NVNqueue* queue, const NVNqueueBuilder* builder)
+{
+    forge_log_trace("[forge] Obtained NVNqueue");
+
+    Graphics::get()->setQueue(queue);
+
+    return s_defaultNvnQueueInitialize(queue, builder);
+}
+
+void customWindowBuilderSetTextures(NVNwindowBuilder* builder, int numTextures, NVNtexture* const* textures)
+{
+    forge_log_trace("[forge] Obtained Swapchain Textures");
+
+    Graphics::get()->setSwapChainTextures(textures, numTextures);
+
+    return s_defaultNvnWindowBuilderSetTextures(builder, numTextures, textures);
+}
+
+void customQueuePresentTexture(NVNqueue* queue, NVNwindow* window, int textureIndex)
+{
+    // The present queue is the one we must submit our overlay on; it is
+    // authoritative here regardless of how many queues the game created.
+    Graphics::get()->setQueue(queue);
+
+    return s_defaultNvnQueuePresentTexture(queue, window, textureIndex);
 }
