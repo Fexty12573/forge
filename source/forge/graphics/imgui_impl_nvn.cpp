@@ -4,6 +4,7 @@
 #include <nvn/nvn_Cpp.h>
 #include <nvn/nvn_CppMethods.h>
 
+#include <cstdlib>
 #include <span>
 #include <vector>
 
@@ -14,12 +15,6 @@ struct ImGui_ImplNVN_Data {
     // Swap Chain related
     std::span<nvn::Texture*> swapChainTextures;
     nvn::Format swapChainFormat;
-
-    // Builders
-    nvn::BufferBuilder bufferBuilder;
-    nvn::MemoryPoolBuilder memPoolBuilder;
-    nvn::TextureBuilder textureBuilder;
-    nvn::SamplerBuilder samplerBuilder;
 
     // Command Buffer Resources
     nvn::CommandBuffer cmdBuffer;
@@ -55,8 +50,49 @@ struct ImGui_ImplNVN_Data {
     bool initialized;
 };
 
-IMGUI_IMPL_API void ImGui_ImplNVN_Init()
+void* InitMemoryPool(nvn::Device* device, nvn::MemoryPool& pool, size_t size)
 {
+    constexpr size_t kAlignment = 0x1000;
+
+    void* storage = aligned_alloc(kAlignment, size);
+    if (storage == nullptr) {
+        return nullptr;
+    }
+
+    nvn::MemoryPoolBuilder builder { };
+    builder
+        .SetDevice(device)
+        .SetDefaults()
+        .SetFlags(nvn::MemoryPoolFlags::CPU_UNCACHED | nvn::MemoryPoolFlags::GPU_CACHED)
+        .SetStorage(storage, size);
+
+    if (!pool.Initialize(&builder)) {
+        free(storage);
+        return nullptr;
+    }
+
+    return storage;
+}
+
+IMGUI_IMPL_API void ImGui_ImplNVN_Init(nvn::Device* device, nvn::Queue* queue)
+{
+    ImGuiIO& io = ImGui::GetIO();
+    IM_ASSERT(!io.BackendRendererUserData && "Already initialized a renderer backend!");
+
+    io.BackendPlatformName = "Switch";
+    io.BackendRendererName = "imgui_impl_nvn";
+    io.IniFilename = nullptr;
+    io.MouseDrawCursor = false;
+    io.ConfigFlags |= ImGuiConfigFlags_IsTouchScreen;
+    io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;
+    io.BackendFlags |= ImGuiBackendFlags_HasGamepad;
+    io.BackendFlags |= ImGuiBackendFlags_RendererHasVtxOffset;
+
+    ImGui_ImplNVN_Data* data = new ImGui_ImplNVN_Data();
+    io.BackendRendererUserData = (void*)data;
+
+    data->device = device;
+    data->queue = queue;
 }
 
 IMGUI_IMPL_API void ImGui_ImplNVN_Shutdown()
