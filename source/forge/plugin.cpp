@@ -2,11 +2,11 @@
 #include "forge/hook.h"
 #include "forge/log.h"
 #include "forge/mem.h"
+#include "forge/nn/crypto.h"
+#include "forge/nn/ro.h"
 #include "forge/proc.h"
 #include "forge/types.h"
 #include "forge/version.h"
-#include "nn/crypto.h"
-#include "nn/ro.h"
 
 #include <dirent.h>
 

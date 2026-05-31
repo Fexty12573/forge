@@ -26,7 +26,7 @@
 #include "forge/hook.h"
 #include "forge/log.h"
 #include "forge/types.h"
-#include <nn/os.h>
+#include <forge/nn/os.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

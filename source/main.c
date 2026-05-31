@@ -1,4 +1,5 @@
 #include "forge/config.h"
+#include "forge/graphics.h"
 #include "forge/hook.h"
 #include "forge/log.h"
 #include "forge/mem.h"
@@ -47,6 +48,10 @@ void forge_main()
     if (R_FAILED(r)) {
         forge_log_trace("[forge] Failed to initialize hooking API: 0x%08X", r);
         return;
+    }
+
+    if (!forge_graphics_init()) {
+        forge_log_trace("[forge] Failed to initialize graphics");
     }
 
     forge_singleton_init();

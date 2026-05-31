@@ -6,9 +6,9 @@
 
 ### Part 1
 
-* [ ] Hook `nvnBootstrapLoader` and return a wrapper for `nvnDeviceGetProcAddress`
+* [x] Hook `nvnBootstrapLoader` and return a wrapper for `nvnDeviceGetProcAddress`
 * [ ] Return wrappers for
-  * [ ] `nvnDeviceInitialize`: Capture created device
+  * [x] `nvnDeviceInitialize`: Capture created device
   * [ ] `nvnQueueInitialize`: Capture created queue
   * [ ] `nvnWindowBuilderSetTextures`: Capture the swapchain textures
   * [ ] `nvnQueuePresentTexture`: Do own rendering

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "nn/socket.h"
+#include "forge/nn/socket.h"
 #include <stdbool.h>
 #include <stddef.h>
 
