@@ -7,3 +7,6 @@
 [submodule "libs/iniparser"]
 	path = libs/iniparser
 	url = https://github.com/ndevilla/iniparser
+[submodule "libs/nnheaders"]
+	path = libs/nnheaders
+	url = https://github.com/open-ead/nnheaders

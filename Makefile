@@ -18,9 +18,9 @@ include $(TOPDIR)/switch32_rules
 #---------------------------------------------------------------------------------
 TARGET		:=	subsdk
 BUILD		:=	build
-SOURCES 	:= 	source source/forge
+SOURCES 	:= 	source source/forge source/forge/graphics
 DATA		:=	data
-INCLUDES	:=	include libs/nnsdk/include libs/iniparser/src libs/libnx/nx/external/bsd/include
+INCLUDES	:=	include libs/nnsdk/include libs/iniparser/src libs/libnx/nx/external/bsd/include libs/nnheaders/include libs/nnheaders/src/NintendoSDK
 
 INIPARSER_DIR	:=	$(TOPDIR)/libs/iniparser/src
 INIPARSER_BUILD	:=	$(TOPDIR)/$(BUILD)/iniparser
