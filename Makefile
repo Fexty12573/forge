@@ -49,7 +49,9 @@ CFLAGS	:=	-g -Wall -Werror \
 
 CFLAGS	+=	$(INCLUDE) -D__SWITCH__ -DLIBNX_NO_DEPRECATION
 
-CXXFLAGS	:= $(CFLAGS) -std=c++23 -fno-rtti -fomit-frame-pointer -fno-exceptions -fno-asynchronous-unwind-tables -fno-unwind-tables -enable-libstdcxx-allocator=new -fpermissive
+CXXFLAGS	:= $(CFLAGS) -std=c++23 -fno-rtti -fomit-frame-pointer -fno-exceptions -fno-asynchronous-unwind-tables -fno-unwind-tables -enable-libstdcxx-allocator=new -fpermissive \
+			-include $(TOPDIR)/include/compat.h \
+			-Wno-deprecated-declarations
 
 ASFLAGS	:=	-g $(ARCH)
 
