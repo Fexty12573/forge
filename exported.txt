@@ -10,5 +10,8 @@
         forge_log_getLevel;
         forge_singleton_get*;
 
+        forge_input_is*;
+        forge_input_get*;
+
     local: *;
 };  

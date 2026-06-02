@@ -1,6 +1,7 @@
 #include "forge/config.h"
 #include "forge/graphics.h"
 #include "forge/hook.h"
+#include "forge/input.h"
 #include "forge/log.h"
 #include "forge/mem.h"
 #include "forge/plugin.h"
@@ -54,6 +55,7 @@ void forge_main()
         forge_log_trace("[forge] Failed to initialize graphics");
     }
 
+    forge_input_init();
     forge_singleton_init();
 
     forge_hook_create((void*)(g_mainTextAddr + 0xB8692C), (void*)(sApp_run), (void**)(&original_sApp_run));
