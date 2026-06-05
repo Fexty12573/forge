@@ -556,7 +556,13 @@ static void UpdateTexture(ImTextureData* tex)
                 .depth = 1,
             };
 
-            backendTex->texture.WriteTexels(nullptr, &region, tex->GetPixelsAt(r.x, r.y));
+            const ptrdiff_t rowStride = tex->GetPitch();
+            backendTex->texture.WriteTexelsStrided(
+                nullptr,
+                &region,
+                tex->GetPixelsAt(r.x, r.y),
+                rowStride,
+                rowStride * r.h);
         }
 
         const nvn::CopyRegion boundingBox {
