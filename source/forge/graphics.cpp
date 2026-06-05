@@ -30,6 +30,8 @@ static NVNboolean customDeviceInitialize(NVNdevice* device, const NVNdeviceBuild
 static NVNboolean customQueueInitialize(NVNqueue* queue, const NVNqueueBuilder* builder);
 static void customWindowBuilderSetTextures(NVNwindowBuilder* builder, int numTextures, NVNtexture* const* textures);
 static void customQueuePresentTexture(NVNqueue* queue, NVNwindow* window, int textureIndex);
+static void* customMemAlloc(size_t size, void*);
+static void customMemFree(void* ptr, void*);
 
 class Graphics {
 public:
@@ -200,6 +202,16 @@ void customQueuePresentTexture(NVNqueue* queue, NVNwindow* window, int textureIn
     return s_defaultNvnQueuePresentTexture(queue, window, textureIndex);
 }
 
+void* customMemAlloc(size_t size, void*)
+{
+    return malloc(size);
+}
+
+void customMemFree(void* ptr, void*)
+{
+    free(ptr);
+}
+
 void Graphics::initialize()
 {
     constexpr auto kDefaultFontPath = "app:/nativeNX/forge/fonts/NotoSans-Regular.ttf";
@@ -209,6 +221,7 @@ void Graphics::initialize()
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
     ImGui::StyleColorsDark();
+    ImGui::SetAllocatorFunctions(customMemAlloc, customMemFree);
 
     auto& style = ImGui::GetStyle();
     style.ScaleAllSizes(1.0f);
@@ -219,6 +232,8 @@ void Graphics::initialize()
 
     auto& io = ImGui::GetIO();
     io.Fonts->AddFontFromFileTTF(kDefaultFontPath, 16.0f);
+
+    forge_plugin_onImGuiInit(ImGui::GetCurrentContext(), (void*)customMemAlloc, (void*)customMemFree);
 
     m_initialized = true;
 

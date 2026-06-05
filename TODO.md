@@ -27,4 +27,4 @@
 
 * [x] Implement `nvnQueuePresentTexture` hook with rendering
 * [x] Provide rendering callback for plugins
-* [ ] Provide `ImGuiContext*` and allocator functions to plugins
+* [x] Provide `ImGuiContext*` and allocator functions to plugins
