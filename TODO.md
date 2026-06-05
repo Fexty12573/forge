@@ -15,16 +15,16 @@
 
 ### Part 2
 
-* [ ] Write custom imgui backend with NVN
-  * [ ] Figure out a solution for compiling shaders
-  * [ ] Figure out how the new texture system can be implemented
+* [x] Write custom imgui backend with NVN
+  * [x] Figure out a solution for compiling shaders
+  * [x] Figure out how the new texture system can be implemented
 
 ### Part 3
 
-* [ ] Capture inputs (maybe `nn::hid` or game facilities) and forward to ImGui
+* [x] Capture inputs (maybe `nn::hid` or game facilities) and forward to ImGui
 
 ### Part 4
 
-* [ ] Implement `nvnQueuePresentTexture` hook with rendering
-* [ ] Provide rendering callback for plugins
+* [x] Implement `nvnQueuePresentTexture` hook with rendering
+* [x] Provide rendering callback for plugins
 * [ ] Provide `ImGuiContext*` and allocator functions to plugins
