@@ -66,6 +66,7 @@ public:
     bool isInitialized() const { return m_initialized; }
 
     void render();
+    bool isMenuVisible() const { return m_uiRendered; }
 
 private:
     nvn::Device* m_device { nullptr };
@@ -99,6 +100,11 @@ extern "C" bool forge_graphics_init(void)
     Graphics::createInstance();
 
     return true;
+}
+
+extern "C" bool forge_graphics_isMenuVisible(void)
+{
+    return Graphics::get()->isMenuVisible();
 }
 
 void* nvnBootstrapLoaderHook(const char* name)

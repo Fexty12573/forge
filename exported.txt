@@ -13,5 +13,7 @@
         forge_input_is*;
         forge_input_get*;
 
+        forge_graphics_is*;
+
     local: *;
 };  
