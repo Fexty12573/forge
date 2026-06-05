@@ -820,11 +820,7 @@ IMGUI_IMPL_API void ImGui_ImplNVN_NewFrame()
 
     io.DisplayFramebufferScale = ImVec2(1, 1);
 
-    // DPI scaling: the framebuffer may be 720p (handheld), 1080p (docked) or
-    // upscaled (e.g. a 4K resolution patch). Scale relative to the Switch's
-    // native 720p so the UI stays a consistent perceptual size everywhere.
-    // FontScaleDpi re-bakes the font crisply (RendererHasTextures); ScaleAllSizes
-    // handles widget metrics and is applied incrementally on change.
+    // DPI scaling
     ImGuiStyle& style = ImGui::GetStyle();
     const float dpiScale = io.DisplaySize.y / 720.0f;
     if (dpiScale != bd->appliedDpiScale && bd->appliedDpiScale > 0.0f) {
