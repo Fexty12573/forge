@@ -1,11 +1,14 @@
 #include "forge/config.h"
 #include "forge/log.h"
 
-#include "iniparser.h"
+#include <iniparser.h>
 
+#include <stdarg.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+
+static Config s_config = { };
 
 char* strdup(const char* str)
 {
@@ -18,41 +21,58 @@ char* strdup(const char* str)
     return copy;
 }
 
+int errorCallback(const char* msg, ...)
+{
+    char buffer[512];
+
+    va_list args;
+    va_start(args, msg);
+    int len = vsnprintf(buffer, sizeof(buffer), msg, args);
+    va_end(args);
+
+    forge_log_trace("[forge] %s", buffer);
+
+    return len;
+}
+
 Config forge_config_createDefault(void)
 {
     Config cfg = {
-        .log_level = "info"
+        .log_level = "info",
+        .menu_key = 66, // ForgeKey_F9
     };
 
     return cfg;
 }
 
-Result forge_config_load(Config* out_config)
+Result forge_config_load(void)
 {
-    if (!out_config) {
-        return KERNELRESULT(InvalidHandle);
-    }
+    s_config = forge_config_createDefault();
 
     if (access(FORGE_CONFIG_PATH, F_OK) != 0) {
         return KERNELRESULT(NotFound);
     }
 
+    iniparser_set_error_callback(errorCallback);
     dictionary* dict = iniparser_load(FORGE_CONFIG_PATH);
-    out_config->log_level = strdup(iniparser_getstring(dict, "log:level", "info"));
+
+    s_config.log_level = strdup(iniparser_getstring(dict, "log:level", "info"));
+    s_config.menu_key = iniparser_getint(dict, "menu:key", 66);
 
     iniparser_freedict(dict);
 
     return 0;
 }
 
-void forge_config_destroy(Config* config)
+void forge_config_destroy(void)
 {
-    if (!config) {
-        return;
+    if (s_config.log_level) {
+        free((char*)s_config.log_level);
+        s_config.log_level = NULL;
     }
+}
 
-    if (config->log_level) {
-        free((char*)config->log_level);
-        config->log_level = NULL;
-    }
+const Config* forge_config_get(void)
+{
+    return &s_config;
 }

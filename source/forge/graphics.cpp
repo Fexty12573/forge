@@ -1,5 +1,6 @@
 #include "forge/graphics.h"
 #include "forge/hook.h"
+#include "forge/input.h"
 #include "forge/log.h"
 #include "forge/nn/ro.h"
 #include "forge/plugin.h"
@@ -220,30 +221,37 @@ void Graphics::initialize()
 
 void Graphics::render()
 {
-    if (ImGui::Begin("forge", &m_uiRendered)) {
-        if (ImGui::CollapsingHeader("About Forge")) {
-            ImGui::Text("Version: %s", FORGE_VERSION);
-            ImGui::SeparatorText("Developers");
-            ImGui::BulletText("jeffi2287");
-            ImGui::BulletText("Fexty");
-
-            ImGui::SeparatorText("Libraries Used");
-            ImGui::BulletText("devkitARM/libnx (32-bit)");
-            ImGui::BulletText("NNSDK");
-            ImGui::BulletText("switch-tools");
-            ImGui::BulletText("iniparser");
-            ImGui::BulletText("Dear ImGui");
-        }
-
-        if (ImGui::CollapsingHeader("Loaded Plugins")) {
-            forge_plugin_renderPluginInfo();
-        }
-
-        if (ImGui::CollapsingHeader("Plugin UI")) {
-            forge_plugin_onImGuiRender();
-        }
+    const auto menuKey = static_cast<ForgeKey>(forge_config_get()->menu_key);
+    if (forge_input_isKeyPressed(menuKey)) {
+        m_uiRendered = !m_uiRendered;
     }
-    ImGui::End();
+
+    if (m_uiRendered) {
+        if (ImGui::Begin("forge", &m_uiRendered)) {
+            if (ImGui::CollapsingHeader("About Forge")) {
+                ImGui::Text("Version: %s", FORGE_VERSION);
+                ImGui::SeparatorText("Developers");
+                ImGui::BulletText("jeffi2287");
+                ImGui::BulletText("Fexty");
+
+                ImGui::SeparatorText("Libraries Used");
+                ImGui::BulletText("devkitARM/libnx (32-bit)");
+                ImGui::BulletText("NNSDK");
+                ImGui::BulletText("switch-tools");
+                ImGui::BulletText("iniparser");
+                ImGui::BulletText("Dear ImGui");
+            }
+
+            if (ImGui::CollapsingHeader("Loaded Plugins")) {
+                forge_plugin_renderPluginInfo();
+            }
+
+            if (ImGui::CollapsingHeader("Plugin UI")) {
+                forge_plugin_onImGuiRender();
+            }
+        }
+        ImGui::End();
+    }
 
     forge_plugin_onImGuiFreeRender();
 }

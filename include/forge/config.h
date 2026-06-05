@@ -10,11 +10,13 @@ extern "C" {
 
 typedef struct Config {
     const char* log_level;
+    int menu_key;
 } Config;
 
 Config forge_config_createDefault(void);
-Result forge_config_load(Config* out_config);
-void forge_config_destroy(Config* config);
+Result forge_config_load(void);
+void forge_config_destroy(void);
+const Config* forge_config_get(void);
 
 #ifdef __cplusplus
 }

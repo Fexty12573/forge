@@ -13,6 +13,10 @@ An environment for linking, runtime hooking and code patching in Monster Hunter 
 7. Right click MHGU and select "Cache Management > Purge PPTC Cache" and "Cache Management > Purge Shader Cache"
 8. Restart Ryujinx
 
+### Keyboard Input
+
+To make keyboard input work, you need to enable "Direct Keyboard Access" in the Ryujinx Input Settings.
+
 ## Building
 
 Be sure to check out submodules first:
