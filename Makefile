@@ -49,15 +49,16 @@ CFLAGS	:=	-g -Wall -Werror \
 
 CFLAGS	+=	$(INCLUDE) -D__SWITCH__ -DLIBNX_NO_DEPRECATION
 
-CXXFLAGS	:= $(CFLAGS) -std=c++23 -fno-rtti -fomit-frame-pointer -fno-exceptions -fno-asynchronous-unwind-tables -fno-unwind-tables -enable-libstdcxx-allocator=new -fpermissive \
+CXXFLAGS	:= $(CFLAGS) -std=c++23 -fno-rtti -fomit-frame-pointer -fno-exceptions -fno-asynchronous-unwind-tables -fno-unwind-tables -enable-libstdcxx-allocator=new -fpermissive -fno-threadsafe-statics \
 			-include $(TOPDIR)/include/compat.h \
-			-Wno-deprecated-declarations
+			-Wno-deprecated-declarations \
+			-fno-builtin-ceil -fno-builtin-ceilf -fno-builtin-floor -fno-builtin-floorf
 
 ASFLAGS	:=	-g $(ARCH)
 
 LDFLAGS  =  -specs=$(TOPDIR)/switch32.specs -g $(ARCH) -Wl,-Map,$(notdir $*.map) -Wl,--version-script=$(TOPDIR)/exported.txt -Wl,-init=forge_init -Wl,-fini=forge_fini -Wl,--export-dynamic -nodefaultlibs
 
-LIBS	:= -liniparser -lgcc -lstdc++ -u malloc -lnx32_min
+LIBS	:= -liniparser -lgcc -lstdc++ -u malloc -lnx32_min -lm
 
 #---------------------------------------------------------------------------------
 # list of directories containing libraries, this must be the top level containing

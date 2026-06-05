@@ -2,6 +2,7 @@
 #include "forge/hook.h"
 #include "forge/log.h"
 #include "forge/nn/ro.h"
+#include "graphics/imgui_impl_nvn.h"
 
 #include <nvn/nvn.h>
 #include <nvn/nvn_Cpp.h>
@@ -51,6 +52,10 @@ public:
         m_swapChainTextures.clear();
         for (int i = 0; i < numTextures; i++) {
             m_swapChainTextures.push_back((nvn::Texture*)textures[i]);
+        }
+
+        if (m_initialized) {
+            ImGui_ImplNVN_SetSwapChainTextures(m_swapChainTextures);
         }
     }
 
@@ -167,10 +172,47 @@ void customQueuePresentTexture(NVNqueue* queue, NVNwindow* window, int textureIn
         gfx->initialize();
     }
 
+    ImGui_ImplNVN_NewFrame();
+
+    ImGui::NewFrame();
+
+    if (ImGui::Begin("Example Window")) {
+        ImGui::Text("This is some text");
+        ImGui::Button("This is a button");
+    }
+    ImGui::End();
+
+    ImGui::Render();
+
+    ImGui_ImplNVN_RenderDrawData(
+        (nvn::Queue*)queue,
+        ImGui::GetDrawData(),
+        textureIndex);
+
     return s_defaultNvnQueuePresentTexture(queue, window, textureIndex);
 }
 
 void Graphics::initialize()
 {
+    constexpr auto kDefaultFontPath = "app:/nativeNX/forge/fonts/NotoSans-Regular.ttf";
+
     nvn::nvnLoadCPPProcs(m_device, (nvn::DeviceGetProcAddressFunc)s_defaultNvnGetProcAddress);
+
+    IMGUI_CHECKVERSION();
+    ImGui::CreateContext();
+    ImGui::StyleColorsDark();
+
+    auto& style = ImGui::GetStyle();
+    style.ScaleAllSizes(1.0f);
+    style.FontScaleDpi = 1.0f;
+    style.FontSizeBase = 16.0f;
+
+    ImGui_ImplNVN_Init(m_device, m_queue, m_swapChainTextures);
+
+    auto& io = ImGui::GetIO();
+    io.Fonts->AddFontFromFileTTF(kDefaultFontPath, 16.0f);
+
+    m_initialized = true;
+
+    forge_log_info("Graphics Initialized");
 }

@@ -1,22 +1,28 @@
 #include "graphics/imgui_impl_nvn.h"
 #include "forge/input.h"
 #include "forge/log.h"
+#include "forge/nn/fs.h"
+#include "forge/nn/os.h"
 
-#include <nn/os.h>
 #include <nvn/nvn_Cpp.h>
 #include <nvn/nvn_CppMethods.h>
 #include <nvnTool/nvnTool_GlslcInterface.h>
+#include <unistd.h>
 
 #include <algorithm>
 #include <cstdlib>
 #include <cstring>
-#include <filesystem>
-#include <fstream>
 #include <list>
 #include <memory>
 #include <queue>
 #include <span>
 #include <vector>
+
+// Experimental hack to forcefully patch the shader binary to GPUcode 1.14.
+// TODO: Remove once a binary can be compiled with actual v1.5-1.14 GPUcode.
+#ifndef FORGE_NVN_SHADER_PATCH_MINOR
+#define FORGE_NVN_SHADER_PATCH_MINOR 14
+#endif
 
 struct ImGui_ImplNVN_CmdMemChunk {
     nvn::MemoryPool pool;
@@ -27,7 +33,7 @@ struct Mat4 {
     float m[4][4];
 };
 
-struct ImGui_ImplNVN_UBO {
+struct __aligned(64) ImGui_ImplNVN_UBO {
     Mat4 proj;
 };
 
@@ -77,6 +83,7 @@ struct ImGui_ImplNVN_Data {
     std::queue<int> unusedTextureSlots;
 
     u64 lastTick;
+    float appliedDpiScale;
 
     bool initialized;
 
@@ -117,12 +124,33 @@ static void GetProjOrtho(Mat4& out, float l, float r, float b, float t, float ne
 
     out.m[0][0] = 2.0f / (r - l);
     out.m[1][1] = 2.0f / (t - b);
-    out.m[2][2] = -2.0f / (far - near);
-    out.m[3][0] = (l - r) / (r - l);
-    out.m[3][1] = (b - t) / (t - b);
-    out.m[3][2] = (near - far) / (far - near);
+    out.m[2][2] = -1.0f;
+    out.m[3][0] = (r + l) / (l - r);
+    out.m[3][1] = (t + b) / (b - t);
+    out.m[3][2] = 0.0f;
     out.m[3][3] = 1.0f;
 }
+
+#if FORGE_NVN_SHADER_PATCH_MINOR
+static int PatchShaderControlVersion(void* control, size_t size, u32 fromMinor, u32 targetMinor)
+{
+    const size_t scan = std::min<size_t>(size >= 8 ? size - 8 : 0, 256);
+    auto* bytes = static_cast<u8*>(control);
+    for (size_t i = 0; i + 8 <= scan + 8; ++i) {
+        u32 a, b;
+        std::memcpy(&a, bytes + i, 4);
+        std::memcpy(&b, bytes + i + 4, 4);
+        if (a == 1u && b == fromMinor) {
+            std::memcpy(bytes + i + 4, &targetMinor, 4);
+            forge_log_warn("Patched shader control version 1.%u -> 1.%u at +0x%zX", fromMinor, targetMinor, i + 4);
+            return static_cast<int>(i + 4);
+        }
+    }
+
+    forge_log_warn("Version stamp {1,%u} not found in control section (size=%zu)", fromMinor, size);
+    return -1;
+}
+#endif
 
 static void* InitMemoryPool(nvn::Device* device, nvn::MemoryPool& pool, size_t size, nvn::MemoryPoolFlags extraFlags = 0, size_t minAlignment = 0, bool gpuCached = true)
 {
@@ -224,16 +252,22 @@ static void LoadShaders(ImGui_ImplNVN_Data* bd)
 {
     constexpr auto kPrecompiledShaderPath = "app:/nativeNX/forge/shaders/compiled/imgui.fbin";
 
-    if (!std::filesystem::exists(kPrecompiledShaderPath)) {
+    nn::fs::FileHandle handle;
+    if (nn::fs::OpenFile(&handle, kPrecompiledShaderPath, nn::fs::OpenMode_Read).IsFailure()) {
         forge_log_error("Shader binary missing! Make sure you installed all files correctly.");
         std::terminate();
     }
 
-    const auto fileSize = std::filesystem::file_size(kPrecompiledShaderPath);
+    s64 fileSize = 0;
+    nn::fs::GetFileSize(&fileSize, handle);
     std::unique_ptr<char[]> buffer = std::make_unique<char[]>(fileSize);
 
-    std::ifstream f(kPrecompiledShaderPath, std::ios::in | std::ios::binary);
-    f.read(buffer.get(), static_cast<std::streamsize>(fileSize));
+    if (nn::fs::ReadFile(handle, 0, buffer.get(), static_cast<size_t>(fileSize)).IsFailure()) {
+        forge_log_error("Failed to read shader from file! Make sure you installed all files correctly.");
+        std::terminate();
+    }
+
+    forge_log_info("Shader loaded (Size: %li)", fileSize);
 
     bd->shaderMemStorage = InitMemoryPool(
         bd->device,
@@ -277,6 +311,9 @@ static void LoadShaders(ImGui_ImplNVN_Data* bd)
             // Store control
             std::memcpy(ptr + offset, data + gpuCode->controlOffset, gpuCode->controlSize);
             bd->shaderData[dataIndex].control = ptr + offset;
+#if FORGE_NVN_SHADER_PATCH_MINOR
+            PatchShaderControlVersion(ptr + offset, gpuCode->controlSize, 16, FORGE_NVN_SHADER_PATCH_MINOR);
+#endif
             offset += AlignUp<kDataAlignment>(gpuCode->controlSize);
 
             // Store data
@@ -288,13 +325,57 @@ static void LoadShaders(ImGui_ImplNVN_Data* bd)
 
     bd->shaderMemPool.FlushMappedRange(0, offset);
 
+    // Check if the precompiled shader binary version is compatible with the driver
+    {
+        int maxMajor = 0, minMajor = 0, maxMinor = 0, minMinor = 0;
+        bd->device->GetInteger(nvn::DeviceInfo::GLSLC_MAX_SUPPORTED_GPU_CODE_MAJOR_VERSION, &maxMajor);
+        bd->device->GetInteger(nvn::DeviceInfo::GLSLC_MIN_SUPPORTED_GPU_CODE_MAJOR_VERSION, &minMajor);
+        bd->device->GetInteger(nvn::DeviceInfo::GLSLC_MAX_SUPPORTED_GPU_CODE_MINOR_VERSION, &maxMinor);
+        bd->device->GetInteger(nvn::DeviceInfo::GLSLC_MIN_SUPPORTED_GPU_CODE_MINOR_VERSION, &minMinor);
+        const int binMajor = (int)output->versionInfo.gpuCodeVersionMajor;
+        const int binMinor = (int)output->versionInfo.gpuCodeVersionMinor;
+        forge_log_info(
+            "Shader bin: api=%u.%u gpuCode=%d.%d pkg=%u | driver accepts gpuCode major[%d..%d] minor[%d..%d]",
+            output->versionInfo.apiMajor, output->versionInfo.apiMinor,
+            binMajor, binMinor, output->versionInfo.package,
+            minMajor, maxMajor, minMinor, maxMinor);
+
+        const bool inRange = binMajor >= minMajor && binMajor <= maxMajor
+            && binMinor >= minMinor && binMinor <= maxMinor;
+        if (!inRange) {
+            forge_log_error(
+                "Shader gpuCode %d.%d is outside the driver's accepted range (major[%d..%d] minor[%d..%d])",
+                binMajor,
+                binMinor,
+                minMajor,
+                maxMajor,
+                minMinor,
+                maxMinor);
+
+#if !FORGE_NVN_SHADER_PATCH_MINOR
+            // When the control-version patch is active the container still
+            // reports the original (rejected) version here; let SetShaders be
+            // the real arbiter instead of bailing out early.
+            std::terminate();
+#endif
+        }
+    }
+
     if (!vertexFound || !fragmentFound) {
         forge_log_error("Could not find either vertex or fragment stage in shader. Make sure you installed all files correctly.");
         std::terminate();
     }
 
-    bd->shaderProgram.Initialize(bd->device);
-    bd->shaderProgram.SetShaders(2, bd->shaderData);
+    if (!bd->shaderProgram.Initialize(bd->device)) {
+        forge_log_error("Failed to initialize shader program");
+        std::terminate();
+    }
+
+    if (!bd->shaderProgram.SetShaders(2, bd->shaderData)) {
+        forge_log_error("Failed to set shaders, rejected by NVN");
+        std::terminate();
+    }
+
     bd->shaderProgram.SetDebugLabel("[forge] ImGui Shader");
 
     // Shader Attributes
@@ -586,6 +667,7 @@ IMGUI_IMPL_API void ImGui_ImplNVN_Init(nvn::Device* device, nvn::Queue* queue, s
     bd->queue = queue;
     bd->swapChainTextures = swapChainTextures;
     bd->lastTick = 0;
+    bd->appliedDpiScale = 1.0f; // style metrics start at the default (1x) scale
 
     // nvn::Buffer is non-copyable/non-movable, so resize() won't compile.
     // Move-assigning a freshly sized vector swaps the storage instead.
@@ -738,8 +820,21 @@ IMGUI_IMPL_API void ImGui_ImplNVN_NewFrame()
 
     io.DisplayFramebufferScale = ImVec2(1, 1);
 
+    // DPI scaling: the framebuffer may be 720p (handheld), 1080p (docked) or
+    // upscaled (e.g. a 4K resolution patch). Scale relative to the Switch's
+    // native 720p so the UI stays a consistent perceptual size everywhere.
+    // FontScaleDpi re-bakes the font crisply (RendererHasTextures); ScaleAllSizes
+    // handles widget metrics and is applied incrementally on change.
+    ImGuiStyle& style = ImGui::GetStyle();
+    const float dpiScale = io.DisplaySize.y / 720.0f;
+    if (dpiScale != bd->appliedDpiScale && bd->appliedDpiScale > 0.0f) {
+        style.ScaleAllSizes(dpiScale / bd->appliedDpiScale);
+        bd->appliedDpiScale = dpiScale;
+    }
+    style.FontScaleDpi = dpiScale;
+
     const auto nowTick = nn::os::GetSystemTick().value;
-    const auto freq = nn::os::GetSystemTickFrequency().value;
+    const auto freq = nn::os::GetSystemTickFrequency();
 
     io.DeltaTime = bd->lastTick == 0
         ? 1 / 60.0f // Avoid weird initial delta time
@@ -752,6 +847,12 @@ IMGUI_IMPL_API void ImGui_ImplNVN_NewFrame()
     ImGui_ImplNVN_UpdateGamepadNav();
     ImGui_ImplNVN_UpdateMouseFromTouch();
     ImGui_ImplNVN_UpdateKeyboard();
+}
+
+IMGUI_IMPL_API void ImGui_ImplNVN_SetSwapChainTextures(std::span<nvn::Texture*> swapChainTextures)
+{
+    const auto bd = GetBackendData();
+    bd->swapChainTextures = swapChainTextures;
 }
 
 static void SetupRenderState(ImGui_ImplNVN_Data* bd, int textureIndex)
@@ -803,7 +904,7 @@ static void SetupRenderState(ImGui_ImplNVN_Data* bd, int textureIndex)
 
     nvn::DepthStencilState dss;
     dss.SetDefaults()
-        .SetDepthTestEnable(true)
+        .SetDepthTestEnable(false)
         .SetDepthWriteEnable(false);
 
     bd->cmdBuffer.BindDepthStencilState(&dss);
@@ -827,7 +928,6 @@ IMGUI_IMPL_API void ImGui_ImplNVN_RenderDrawData(nvn::Queue* queue, ImDrawData* 
     }
 
     const auto bd = GetBackendData();
-    const auto device = bd->device;
 
     if (drawData->Textures != nullptr) {
         for (const auto tex : *drawData->Textures) {
@@ -837,13 +937,13 @@ IMGUI_IMPL_API void ImGui_ImplNVN_RenderDrawData(nvn::Queue* queue, ImDrawData* 
         }
     }
 
-    if (bd->vtxSizes[textureIndex] < drawData->TotalVtxCount || bd->idxSizes[textureIndex] < drawData->TotalIdxCount) {
+    const auto totalVtxCount = static_cast<size_t>(drawData->TotalVtxCount);
+    const auto totalIdxCount = static_cast<size_t>(drawData->TotalIdxCount);
+
+    if (bd->vtxSizes[textureIndex] < totalVtxCount || bd->idxSizes[textureIndex] < totalIdxCount) {
         constexpr size_t kVertexHeadroom = 5000;
         constexpr size_t kIndexHeadroom = 10000;
-        CreateTransientMemory(
-            bd,
-            drawData->TotalVtxCount + kVertexHeadroom,
-            drawData->TotalIdxCount + kIndexHeadroom);
+        CreateTransientMemory(bd, totalVtxCount + kVertexHeadroom, totalIdxCount + kIndexHeadroom);
     }
 
     GetProjOrtho(bd->ubo.proj, 0.0f, drawData->DisplaySize.x, drawData->DisplaySize.y, 0.0f, -1.0f, 1.0f);
@@ -855,7 +955,7 @@ IMGUI_IMPL_API void ImGui_ImplNVN_RenderDrawData(nvn::Queue* queue, ImDrawData* 
     bd->cmdBuffer.BindVertexBuffer(
         0,
         bd->vtxBuffers[textureIndex].GetAddress(),
-        drawData->TotalVtxCount * sizeof(ImDrawVert));
+        totalVtxCount * sizeof(ImDrawVert));
 
     auto vtxDst = static_cast<ImDrawVert*>(bd->vtxBuffers[textureIndex].Map());
     auto idxDst = static_cast<ImDrawIdx*>(bd->idxBuffers[textureIndex].Map());
@@ -866,8 +966,8 @@ IMGUI_IMPL_API void ImGui_ImplNVN_RenderDrawData(nvn::Queue* queue, ImDrawData* 
         idxDst += drawList->IdxBuffer.Size;
     }
 
-    bd->vtxBuffers[textureIndex].FlushMappedRange(0, drawData->TotalVtxCount * sizeof(ImDrawVert));
-    bd->idxBuffers[textureIndex].FlushMappedRange(0, drawData->TotalIdxCount * sizeof(ImDrawIdx));
+    bd->vtxBuffers[textureIndex].FlushMappedRange(0, totalVtxCount * sizeof(ImDrawVert));
+    bd->idxBuffers[textureIndex].FlushMappedRange(0, totalIdxCount * sizeof(ImDrawIdx));
 
     const ImVec2 clipOff = drawData->DisplayPos;
     const ImVec2 clipScale = drawData->FramebufferScale;
@@ -916,4 +1016,5 @@ IMGUI_IMPL_API void ImGui_ImplNVN_RenderDrawData(nvn::Queue* queue, ImDrawData* 
 
     const auto handle = bd->cmdBuffer.EndRecording();
     queue->SubmitCommands(1, &handle);
+    queue->Flush();
 }

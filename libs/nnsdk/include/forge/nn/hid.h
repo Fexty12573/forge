@@ -1,18 +1,6 @@
 #pragma once
 
-// Minimal nn::hid declarations for Forge.
-//
-// We deliberately avoid nnheaders' <nn/hid.h>: it contains a static_assert on
-// the internal HID shared-memory layout (detail::SharedMemoryFormat) that is
-// tuned for AArch64, and the sub-struct sizes don't sum to 0x40000 on MHGU's
-// AArch32 build, so it fails to compile. None of that internal layout is
-// needed to call the public Npad API, so we declare only the subset we use.
-//
-// Reusing the real nn::util::BitFlagSet template (which compiles fine) keeps
-// the symbol mangling byte-identical to the game's statically-linked nnSdk, so
-// these prototypes resolve against it at load time.
-
-#include <nn/util/util_BitFlagSet.h> // pulls <nn/types.h> for u32/s32/u64
+#include <nn/util/util_BitFlagSet.h>
 
 namespace nn::hid {
 
@@ -69,28 +57,21 @@ struct NpadBaseState {
     NpadAttributeSet mAttributes;
 };
 
-// All concrete styles share NpadBaseState's layout; the distinct types only
-// exist to select the matching GetNpadState overload.
 struct NpadFullKeyState : NpadBaseState { };
 struct NpadHandheldState : NpadBaseState { };
 struct NpadJoyDualState : NpadBaseState { };
 
 void InitializeNpad();
-void SetSupportedNpadIdType(const u32*, u64);
+void SetSupportedNpadIdType(const unsigned*, unsigned);
 void SetSupportedNpadStyleSet(NpadStyleSet);
-NpadStyleSet GetNpadStyleSet(const u32& port);
+NpadStyleSet GetNpadStyleSet(const unsigned& port);
 
-void GetNpadState(NpadFullKeyState*, const u32& port);
-void GetNpadState(NpadHandheldState*, const u32& port);
-void GetNpadState(NpadJoyDualState*, const u32& port);
+void GetNpadState(NpadFullKeyState*, const unsigned& port);
+void GetNpadState(NpadHandheldState*, const unsigned& port);
+void GetNpadState(NpadJoyDualState*, const unsigned& port);
 
 // ---------------------------------------------------------------------------
 // Touch screen
-//
-// NOTE: InitializeTouchScreen/GetTouchScreenState are NOT present in the
-// nnheaders RE headers, so these prototypes are best-effort and must match the
-// game's nnSdk symbols to resolve at load time. If touch silently does nothing
-// at runtime, suspect a mangling mismatch here.
 // ---------------------------------------------------------------------------
 enum class TouchAttribute {
     Transferable = 0,
@@ -107,18 +88,20 @@ struct TouchState {
     s32 mDiameterX;
     s32 mDiameterY;
     s32 mRotationAngle;
+    u8 reserved[4];
 };
 
-template <u64 N>
+template <size_t N>
 struct TouchScreenState {
-    u64 mSamplingNumber;
+    s64 mSamplingNumber;
     s32 mCount;
+    u8 reserved[4];
     TouchState mTouches[N];
 };
 
 void InitializeTouchScreen();
 
-template <u64 N>
+template <size_t N>
 void GetTouchScreenState(TouchScreenState<N>* outState);
 
 // ---------------------------------------------------------------------------

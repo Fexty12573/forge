@@ -65,7 +65,7 @@ extern "C" void forge_input_init(void)
 {
     InitializeNpad();
 
-    const u32 supportedIds[] = { kNpadHandheld, kNpadPlayer1 };
+    const unsigned int supportedIds[] = { kNpadHandheld, kNpadPlayer1 };
     SetSupportedNpadIdType(supportedIds, std::size(supportedIds));
 
     NpadStyleSet styles { };
