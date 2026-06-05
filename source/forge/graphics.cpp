@@ -2,6 +2,8 @@
 #include "forge/hook.h"
 #include "forge/log.h"
 #include "forge/nn/ro.h"
+#include "forge/plugin.h"
+#include "forge/version.h"
 #include "graphics/imgui_impl_nvn.h"
 
 #include <nvn/nvn.h>
@@ -62,11 +64,14 @@ public:
     void initialize();
     bool isInitialized() const { return m_initialized; }
 
+    void render();
+
 private:
     nvn::Device* m_device { nullptr };
     nvn::Queue* m_queue { nullptr };
     std::vector<nvn::Texture*> m_swapChainTextures { };
     bool m_initialized { false };
+    bool m_uiRendered { true };
 
     static inline Graphics* s_instance = nullptr;
 };
@@ -176,11 +181,7 @@ void customQueuePresentTexture(NVNqueue* queue, NVNwindow* window, int textureIn
 
     ImGui::NewFrame();
 
-    if (ImGui::Begin("Example Window")) {
-        ImGui::Text("This is some text");
-        ImGui::Button("This is a button");
-    }
-    ImGui::End();
+    gfx->render();
 
     ImGui::Render();
 
@@ -215,4 +216,34 @@ void Graphics::initialize()
     m_initialized = true;
 
     forge_log_info("Graphics Initialized");
+}
+
+void Graphics::render()
+{
+    if (ImGui::Begin("forge", &m_uiRendered)) {
+        if (ImGui::CollapsingHeader("About Forge")) {
+            ImGui::Text("Version: %s", FORGE_VERSION);
+            ImGui::SeparatorText("Developers");
+            ImGui::BulletText("jeffi2287");
+            ImGui::BulletText("Fexty");
+
+            ImGui::SeparatorText("Libraries Used");
+            ImGui::BulletText("devkitARM/libnx (32-bit)");
+            ImGui::BulletText("NNSDK");
+            ImGui::BulletText("switch-tools");
+            ImGui::BulletText("iniparser");
+            ImGui::BulletText("Dear ImGui");
+        }
+
+        if (ImGui::CollapsingHeader("Loaded Plugins")) {
+            forge_plugin_renderPluginInfo();
+        }
+
+        if (ImGui::CollapsingHeader("Plugin UI")) {
+            forge_plugin_onImGuiRender();
+        }
+    }
+    ImGui::End();
+
+    forge_plugin_onImGuiFreeRender();
 }
