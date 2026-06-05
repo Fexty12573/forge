@@ -1,5 +1,7 @@
 #include "forge/config.h"
+#include "forge/graphics.h"
 #include "forge/hook.h"
+#include "forge/input.h"
 #include "forge/log.h"
 #include "forge/mem.h"
 #include "forge/plugin.h"
@@ -14,12 +16,12 @@ void (*original_sApp_run)(void*) = NULL;
 
 void sApp_run(void* app)
 {
-    Config config = forge_config_createDefault();
-    if (R_FAILED(forge_config_load(&config))) {
+    forge_log_trace("[forge] Loading config");
+    if (R_FAILED(forge_config_load())) {
         forge_log_trace("[forge] Failed to load config, using defaults");
     }
 
-    forge_log_init(&config);
+    forge_log_init(forge_config_get());
     forge_singleton_resolve();
 
     forge_log_info("[forge] Loading plugins...");
@@ -49,6 +51,11 @@ void forge_main()
         return;
     }
 
+    if (!forge_graphics_init()) {
+        forge_log_trace("[forge] Failed to initialize graphics");
+    }
+
+    forge_input_init();
     forge_singleton_init();
 
     forge_hook_create((void*)(g_mainTextAddr + 0xB8692C), (void*)(sApp_run), (void**)(&original_sApp_run));

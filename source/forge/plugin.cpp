@@ -2,13 +2,14 @@
 #include "forge/hook.h"
 #include "forge/log.h"
 #include "forge/mem.h"
+#include "forge/nn/crypto.h"
+#include "forge/nn/ro.h"
 #include "forge/proc.h"
 #include "forge/types.h"
 #include "forge/version.h"
-#include "nn/crypto.h"
-#include "nn/ro.h"
 
 #include <dirent.h>
+#include <imgui.h>
 
 #include <compare>
 #include <cstdio>
@@ -59,12 +60,21 @@ struct ForgeVersion {
 
 struct PluginInitParam {
     ForgeVersion required_ver;
+    char name[64];
+
+    PluginInitParam()
+    {
+        std::memset(this, 0, sizeof(*this));
+    }
 };
 
 struct PluginEvents {
     void (*on_load)(PluginInitParam* out_param);
     void (*on_init)();
     void (*on_update)(float dt);
+    void (*on_imgui_init)(void* ctx, void* alloc, void* free);
+    void (*on_imgui_render)();
+    void (*on_imgui_free_render)();
 };
 
 struct Plugin {
@@ -170,7 +180,7 @@ void forge_plugin_onUpdateHook(void* main)
     }
 }
 
-void forge_plugin_init(void)
+extern "C" void forge_plugin_init(void)
 {
     s_pluginLoader.update_hook = forge_hook_create(
         (void*)(g_mainTextAddr + 0x3DA8FC),
@@ -178,7 +188,7 @@ void forge_plugin_init(void)
         (void**)&s_pluginLoader.original_update);
 }
 
-void forge_plugin_loadPlugins(void)
+extern "C" void forge_plugin_loadPlugins(void)
 {
     DIR* dir = opendir("app:/nativeNX/plugins");
     if (dir == NULL) {
@@ -284,6 +294,9 @@ void forge_plugin_loadPlugins(void)
         plugin.events.on_load = plugin.getSymbol<void(PluginInitParam*)>("forge_onLoad");
         plugin.events.on_init = plugin.getSymbol<void()>("forge_onInit");
         plugin.events.on_update = plugin.getSymbol<void(float)>("forge_onUpdate");
+        plugin.events.on_imgui_init = plugin.getSymbol<void(void*, void*, void*)>("forge_onImGuiInit");
+        plugin.events.on_imgui_render = plugin.getSymbol<void()>("forge_onImGuiRender");
+        plugin.events.on_imgui_free_render = plugin.getSymbol<void()>("forge_onImGuiFreeRender");
 
         if (!plugin.events.on_load) {
             forge_log_warn("Plugin %s does not have a forge_onLoad function, skipping", plugin.path.c_str());
@@ -320,4 +333,40 @@ void forge_plugin_loadPlugins(void)
     std::erase_if(s_pluginLoader.plugins, [&to_remove](const Plugin& plugin) {
         return to_remove.contains(plugin.hash);
     });
+}
+
+extern "C" void forge_plugin_renderPluginInfo(void)
+{
+    for (auto& plugin : s_pluginLoader.plugins) {
+        if (plugin.param.name[0] != '\0') {
+            ImGui::BulletText(plugin.param.name);
+        }
+    }
+}
+
+extern "C" void forge_plugin_onImGuiInit(void* ctx, void* alloc, void* free)
+{
+    for (auto& plugin : s_pluginLoader.plugins) {
+        if (plugin.events.on_imgui_init) {
+            plugin.events.on_imgui_init(ctx, alloc, free);
+        }
+    }
+}
+
+extern "C" void forge_plugin_onImGuiRender(void)
+{
+    for (auto& plugin : s_pluginLoader.plugins) {
+        if (plugin.events.on_imgui_render) {
+            plugin.events.on_imgui_render();
+        }
+    }
+}
+
+extern "C" void forge_plugin_onImGuiFreeRender(void)
+{
+    for (auto& plugin : s_pluginLoader.plugins) {
+        if (plugin.events.on_imgui_free_render) {
+            plugin.events.on_imgui_free_render();
+        }
+    }
 }

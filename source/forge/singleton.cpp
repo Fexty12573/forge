@@ -44,7 +44,7 @@ extern "C" void forge_singleton_init(void)
 
 extern "C" void forge_singleton_resolve(void)
 {
-    forge_log_info("Resolving Singletons...");
+    forge_log_debug("Resolving Singletons...");
 
     for (const auto instance : s_singletons) {
         const auto obj = (MtObject*)instance;
@@ -53,9 +53,9 @@ extern "C" void forge_singleton_resolve(void)
         s_singletonMap[type->id] = instance;
 
         if (type->name != nullptr) {
-            forge_log_info("Resolved Singleton: %s @ 0x%X", type->name, (uintptr_t)instance);
+            forge_log_debug("Resolved Singleton: %s @ 0x%X", type->name, (uintptr_t)instance);
         } else {
-            forge_log_info("Resolved Singleton: 0x%08X @ 0x%X", type->id, (uintptr_t)instance);
+            forge_log_debug("Resolved Singleton: 0x%08X @ 0x%X", type->id, (uintptr_t)instance);
         }
     }
 

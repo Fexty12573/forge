@@ -15,4 +15,16 @@ void* nnosGetTlsValue(TlsSlot slot);
 
 #ifdef __cplusplus
 }
+
+namespace nn::os {
+
+struct Tick {
+    s64 value;
+};
+
+Tick GetSystemTick();
+s64 GetSystemTickFrequency();
+
+}
+
 #endif
