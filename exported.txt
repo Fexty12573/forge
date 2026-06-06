@@ -15,5 +15,8 @@
 
         forge_graphics_is*;
 
+        ig*;
+        Im*;
+
     local: *;
 };  

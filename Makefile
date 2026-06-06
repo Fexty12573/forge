@@ -21,8 +21,9 @@ BUILD		:=	build
 SOURCES 	:= 	source \
 				source/forge \
 				source/forge/graphics \
-				libs/imgui
-				
+				libs/cimgui \
+				libs/cimgui/imgui
+
 DATA		:=	data
 INCLUDES	:=	include \
 				libs/nnsdk/include \
@@ -30,7 +31,7 @@ INCLUDES	:=	include \
 				libs/libnx/nx/external/bsd/include \
 				libs/nnheaders/include \
 				libs/nnheaders/src/NintendoSDK \
-				libs/imgui
+				libs/cimgui/imgui
 
 INIPARSER_DIR	:=	$(TOPDIR)/libs/iniparser/src
 INIPARSER_BUILD	:=	$(TOPDIR)/$(BUILD)/iniparser
@@ -108,6 +109,9 @@ export DEPSDIR	?=	$(CURDIR)/$(BUILD)
 CFILES		:=	$(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.c)))
 CPPFILES	:=	$(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.cpp)))
 SFILES		:=	$(foreach dir,$(SOURCES),$(notdir $(wildcard $(dir)/*.s)))
+
+# Remove cimgui backend wrappers
+CPPFILES	:=	$(filter-out cimgui_impl.cpp,$(CPPFILES))
 
 #---------------------------------------------------------------------------------
 # use CXX for linking C++ projects, CC for standard C

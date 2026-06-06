@@ -10,6 +10,6 @@
 [submodule "libs/nnheaders"]
 	path = libs/nnheaders
 	url = https://github.com/open-ead/nnheaders
-[submodule "libs/imgui"]
-	path = libs/imgui
-	url = https://github.com/ocornut/imgui
+[submodule "libs/cimgui"]
+	path = libs/cimgui
+	url = https://github.com/cimgui/cimgui.git
