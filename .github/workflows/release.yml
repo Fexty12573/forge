@@ -27,7 +27,7 @@ jobs:
           mkdir -p forge/exefs forge/romfs/nativeNX/forge
           cp artifact/subsdk.nso        forge/exefs/subsdk9
           cp artifact/main.npdm         forge/exefs/main.npdm
-          cp artifact/data/config.ini   forge/romfs/nativeNX/forge/config.ini
+          cp -R artifact/data/. forge/romfs/nativeNX/forge
           zip -r forge-${{ github.ref_name }}.zip forge/
 
       - name: Create GitHub release

@@ -214,7 +214,7 @@ void customMemFree(void* ptr, void*)
 
 void Graphics::initialize()
 {
-    constexpr auto kDefaultFontPath = "app:/nativeNX/forge/fonts/NotoSans-Regular.ttf";
+    constexpr auto kDefaultFontPath = "app:/nativeNX/forge/fonts/Roboto-Medium.ttf";
 
     nvn::nvnLoadCPPProcs(m_device, (nvn::DeviceGetProcAddressFunc)s_defaultNvnGetProcAddress);
 

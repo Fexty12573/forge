@@ -46,4 +46,8 @@ jobs:
             subsdk.nso
             main.npdm
             data/config.ini
+            data/fonts/Roboto-Medium.ttf
+            data/shaders/imgui_frag.fsh
+            data/shaders/imgui_vert.vsh
+            data/shaders/compiled/imgui.fbin
 
