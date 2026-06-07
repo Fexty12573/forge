@@ -24,6 +24,11 @@ void sApp_run(void* app)
     forge_log_init(forge_config_get());
     forge_singleton_resolve();
 
+    const int result = forge_socket_initDefault();
+    if (result != 0) {
+        forge_log_trace("[forge] Failed to initialize socket library: 0x%X", result);
+    }
+
     forge_log_info("[forge] Loading plugins...");
     forge_plugin_init();
     forge_plugin_loadPlugins();
@@ -38,11 +43,6 @@ void forge_main()
 
     if (!FORGE_VERSION_IS_RELEASE) {
         forge_log_trace("[WARN] [forge] Running a non-release build, expect instability and crashes");
-    }
-
-    const int result = forge_socket_initDefault();
-    if (result != 0) {
-        forge_log_trace("[forge] Failed to initialize socket library: 0x%X", result);
     }
 
     const Result r = forge_hook_init();
