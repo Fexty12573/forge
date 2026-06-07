@@ -75,7 +75,7 @@ private:
     nvn::Queue* m_queue { nullptr };
     std::vector<nvn::Texture*> m_swapChainTextures { };
     bool m_initialized { false };
-    bool m_uiRendered { true };
+    bool m_uiRendered { false };
 
     static inline Graphics* s_instance = nullptr;
 };
