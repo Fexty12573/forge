@@ -3,6 +3,7 @@
 #include "forge/log.h"
 #include "forge/nn/fs.h"
 #include "forge/nn/os.h"
+#include "graphics/allocator.h"
 
 #include <nvn/nvn_Cpp.h>
 #include <nvn/nvn_CppMethods.h>
@@ -24,11 +25,6 @@
 #define FORGE_NVN_SHADER_PATCH_MINOR 14
 #endif
 
-struct ImGui_ImplNVN_CmdMemChunk {
-    nvn::MemoryPool pool;
-    void* storage;
-};
-
 struct Mat4 {
     float m[4][4];
 };
@@ -47,11 +43,7 @@ struct ImGui_ImplNVN_Data {
 
     // Command Buffer Resources
     nvn::CommandBuffer cmdBuffer;
-    nvn::MemoryPool cmdMemPool;
-    void* cmdMemStorage;
-    void* controlMem;
-    std::list<ImGui_ImplNVN_CmdMemChunk> extraCmdMem;
-    std::vector<void*> extraControlMem;
+    std::unique_ptr<CommandBufferAllocator> cmdBufferAllocator;
 
     // Shader Resources
     nvn::Program shaderProgram;
@@ -112,12 +104,6 @@ struct ImGui_ImplNVN_Texture {
     int descriptorSlot;
 };
 
-template <size_t Align>
-size_t AlignUp(size_t value)
-{
-    return (value + Align - 1) & ~(Align - 1);
-}
-
 static void GetProjOrtho(Mat4& out, float l, float r, float b, float t, float near, float far)
 {
     std::memset(&out, 0, sizeof(out));
@@ -152,100 +138,19 @@ static int PatchShaderControlVersion(void* control, size_t size, u32 fromMinor, 
 }
 #endif
 
-static void* InitMemoryPool(nvn::Device* device, nvn::MemoryPool& pool, size_t size, nvn::MemoryPoolFlags extraFlags = 0, size_t minAlignment = 0, bool gpuCached = true)
-{
-    constexpr size_t kAlignment = 0x1000;
-    constexpr size_t kSizeAlignment = 0x1000;
-
-    const size_t alignment = std::max(kAlignment, minAlignment);
-
-    const size_t alignedSize = AlignUp<kSizeAlignment>(size);
-    void* storage = aligned_alloc(alignment, alignedSize);
-    if (storage == nullptr) {
-        return nullptr;
-    }
-
-    const auto baseFlags = gpuCached ? nvn::MemoryPoolFlags::GPU_CACHED : 0;
-    nvn::MemoryPoolBuilder builder { };
-    builder
-        .SetDevice(device)
-        .SetDefaults()
-        .SetFlags(baseFlags | extraFlags)
-        .SetStorage(storage, alignedSize);
-
-    if (!pool.Initialize(&builder)) {
-        free(storage);
-        return nullptr;
-    }
-
-    return storage;
-}
-
 static ImGui_ImplNVN_Data* GetBackendData()
 {
     return static_cast<ImGui_ImplNVN_Data*>(ImGui::GetIO().BackendRendererUserData);
 }
 
-static void ImGui_ImplNVN_CmdMemCallback(nvn::CommandBuffer* cmdBuffer, nvn::CommandBufferMemoryEvent::Enum event, size_t minSize, void* userData)
-{
-    auto bd = static_cast<ImGui_ImplNVN_Data*>(userData);
-    if (event == nvn::CommandBufferMemoryEvent::OUT_OF_COMMAND_MEMORY) {
-        ImGui_ImplNVN_CmdMemChunk& chunk = bd->extraCmdMem.emplace_back();
-        chunk.storage = InitMemoryPool(
-            bd->device,
-            chunk.pool,
-            minSize,
-            nvn::MemoryPoolFlags::CPU_UNCACHED | nvn::MemoryPoolFlags::GPU_UNCACHED,
-            0,
-            false); // GPU Uncached
-
-        if (chunk.storage == nullptr) {
-            forge_log_error("Failed to allocate command buffer memory");
-            std::terminate();
-        }
-
-        cmdBuffer->AddCommandMemory(&chunk.pool, 0, minSize);
-    } else { // OUT_OF_CONTROL_MEMORY
-        void* ptr = aligned_alloc(8, minSize);
-        if (ptr == nullptr) {
-            forge_log_error("Failed to allocate command buffer memory");
-            std::terminate();
-        }
-
-        cmdBuffer->AddControlMemory(ptr, minSize);
-        bd->extraControlMem.push_back(ptr);
-    }
-}
-
 static void CreateCommandBuffer(ImGui_ImplNVN_Data* bd)
 {
-    constexpr size_t kControlMemorySize = 0x10000; // 64K
-    constexpr size_t kCommandMemorySize = 0x40000; // 256K
-
     if (!bd->cmdBuffer.Initialize(bd->device)) {
         forge_log_error("Failed to initialize command buffer");
         std::terminate();
     }
 
-    bd->controlMem = aligned_alloc(8, kControlMemorySize);
-    bd->cmdMemStorage = InitMemoryPool(
-        bd->device,
-        bd->cmdMemPool,
-        kCommandMemorySize,
-        nvn::MemoryPoolFlags::CPU_UNCACHED | nvn::MemoryPoolFlags::GPU_UNCACHED,
-        0,
-        false); // GPU Uncached
-
-    if (bd->cmdMemStorage == nullptr || bd->controlMem == nullptr) {
-        forge_log_error("Failed to allocate command buffer memory");
-        std::terminate();
-    }
-
-    bd->cmdBuffer.AddControlMemory(bd->controlMem, kControlMemorySize);
-    bd->cmdBuffer.AddCommandMemory(&bd->cmdMemPool, 0, kCommandMemorySize);
-
-    bd->cmdBuffer.SetMemoryCallback(ImGui_ImplNVN_CmdMemCallback);
-    bd->cmdBuffer.SetMemoryCallbackData(bd);
+    bd->cmdBufferAllocator = std::make_unique<CommandBufferAllocator>(bd->device, &bd->cmdBuffer);
 }
 
 static void LoadShaders(ImGui_ImplNVN_Data* bd)
@@ -950,6 +855,7 @@ IMGUI_IMPL_API void ImGui_ImplNVN_RenderDrawData(nvn::Queue* queue, ImDrawData* 
 
     GetProjOrtho(bd->ubo.proj, 0.0f, drawData->DisplaySize.x, drawData->DisplaySize.y, 0.0f, -1.0f, 1.0f);
 
+    bd->cmdBufferAllocator->ResetMemory();
     bd->cmdBuffer.BeginRecording();
 
     SetupRenderState(bd, textureIndex);
