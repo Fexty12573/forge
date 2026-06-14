@@ -310,7 +310,6 @@ extern "C" void forge_plugin_loadPlugins(void)
                 plugin.path.c_str(),
                 plugin.param.required_ver.major,
                 plugin.param.required_ver.minor,
-                plugin.param.required_ver.patch,
                 s_loaderVersion.major,
                 s_loaderVersion.minor,
                 s_loaderVersion.patch);
