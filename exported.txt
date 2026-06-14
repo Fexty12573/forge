@@ -17,6 +17,8 @@
 
         forge_nnos*;
 
+        forge_fs_*;
+
         ig*;
         Im*;
 
