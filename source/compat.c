@@ -1,6 +1,7 @@
 #include "forge/log.h"
 
 #include <ctype.h>
+#include <stdlib.h>
 
 void NX_NORETURN __assert_fail(const char* __assertion, const char* __file, unsigned __line, const char* __function);
 
@@ -8,6 +9,78 @@ void __assert_func(const char* file, int line, const char* function, const char*
 {
     forge_log_error("Assertion failed: %s, at %s:%d, in function %s", expr, file, line, function);
     __assert_fail(expr, file, line, function);
+}
+
+// LLM Generated implementation of strtod, let's hope it works
+double strtod(const char* nptr, char** endptr)
+{
+    const char* s = nptr;
+    while (*s == ' ' || (*s >= '\t' && *s <= '\r'))
+        s++;
+
+    int sign = 1;
+    if (*s == '+' || *s == '-') {
+        if (*s == '-')
+            sign = -1;
+        s++;
+    }
+
+    double value = 0.0;
+    int have_digits = 0;
+    while (*s >= '0' && *s <= '9') {
+        value = value * 10.0 + (double)(*s - '0');
+        s++;
+        have_digits = 1;
+    }
+
+    if (*s == '.') {
+        s++;
+        double scale = 0.1;
+        while (*s >= '0' && *s <= '9') {
+            value += (double)(*s - '0') * scale;
+            scale *= 0.1;
+            s++;
+            have_digits = 1;
+        }
+    }
+
+    if (have_digits && (*s == 'e' || *s == 'E')) {
+        const char* e = s + 1;
+        int esign = 1;
+        if (*e == '+' || *e == '-') {
+            if (*e == '-')
+                esign = -1;
+            e++;
+        }
+        if (*e >= '0' && *e <= '9') {
+            int exp = 0;
+            while (*e >= '0' && *e <= '9')
+                exp = exp * 10 + (*e++ - '0');
+            double factor = 1.0;
+            while (exp-- > 0)
+                factor *= 10.0;
+            if (esign < 0)
+                value /= factor;
+            else
+                value *= factor;
+            s = e;
+        }
+    }
+
+    if (endptr)
+        *endptr = (char*)(have_digits ? s : nptr);
+
+    return sign * value;
+}
+
+float strtof(const char* nptr, char** endptr)
+{
+    return (float)strtod(nptr, endptr);
+}
+
+double atof(const char* nptr)
+{
+    return strtod(nptr, NULL);
 }
 
 // clang-format off

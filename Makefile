@@ -40,7 +40,7 @@ INIPARSER_LIB	:=	$(INIPARSER_BUILD)/libiniparser.a
 #---------------------------------------------------------------------------------
 # options for code generation
 #---------------------------------------------------------------------------------
-ARCH	:=	-march=armv8-a+crc+crypto -mtune=cortex-a57 -mtp=soft -fPIC -ftls-model=initial-exec
+ARCH	:=	-march=armv8-a+crc+crypto -mtune=cortex-a57 -mtp=soft -mfloat-abi=softfp -mfpu=crypto-neon-fp-armv8 -fPIC -ftls-model=initial-exec
 
 CFLAGS	:=	-g -Wall -Werror \
 			-ffunction-sections \
