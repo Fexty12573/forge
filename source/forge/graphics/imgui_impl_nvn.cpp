@@ -655,67 +655,68 @@ static void ImGui_ImplNVN_UpdateMouseFromTouch()
 static void ImGui_ImplNVN_UpdateKeyboard()
 {
     ImGuiIO& io = ImGui::GetIO();
+    const bool shift = forge_input_isShiftDown();
 
     io.AddKeyEvent(ImGuiMod_Ctrl, forge_input_isCtrlDown());
-    io.AddKeyEvent(ImGuiMod_Shift, forge_input_isShiftDown());
+    io.AddKeyEvent(ImGuiMod_Shift, shift);
     io.AddKeyEvent(ImGuiMod_Alt, forge_input_isAltDown());
 
-    static const struct {
-        ForgeKey k;
-        ImGuiKey key;
-    } kMap[] = {
-        { ForgeKey_Tab, ImGuiKey_Tab },
-        { ForgeKey_Left, ImGuiKey_LeftArrow },
-        { ForgeKey_Right, ImGuiKey_RightArrow },
-        { ForgeKey_Up, ImGuiKey_UpArrow },
-        { ForgeKey_Down, ImGuiKey_DownArrow },
-        { ForgeKey_PageUp, ImGuiKey_PageUp },
-        { ForgeKey_PageDown, ImGuiKey_PageDown },
-        { ForgeKey_Home, ImGuiKey_Home },
-        { ForgeKey_End, ImGuiKey_End },
-        { ForgeKey_Insert, ImGuiKey_Insert },
-        { ForgeKey_Delete, ImGuiKey_Delete },
-        { ForgeKey_Backspace, ImGuiKey_Backspace },
-        { ForgeKey_Space, ImGuiKey_Space },
-        { ForgeKey_Enter, ImGuiKey_Enter },
-        { ForgeKey_Escape, ImGuiKey_Escape },
-    };
-    for (auto& m : kMap) {
-        io.AddKeyEvent(m.key, forge_input_isKeyDown(m.k));
-    }
-
-    // Contiguous ranges: A–Z and digits.
-    for (int i = 0; i < 26; ++i) {
-        io.AddKeyEvent((ImGuiKey)(ImGuiKey_A + i), forge_input_isKeyDown((ForgeKey)(ForgeKey_A + i)));
-    }
-    for (int i = 0; i < 9; ++i) {
-        io.AddKeyEvent((ImGuiKey)(ImGuiKey_1 + i), forge_input_isKeyDown((ForgeKey)(ForgeKey_1 + i)));
-    }
-
-    io.AddKeyEvent(ImGuiKey_0, forge_input_isKeyDown(ForgeKey_0));
-
-    // Text input (basic US-QWERTY): one char per key pressed this frame.
-    const bool shift = forge_input_isShiftDown();
-    for (int i = 0; i < 26; ++i) {
-        if (forge_input_isKeyPressed((ForgeKey)(ForgeKey_A + i))) {
-            io.AddInputCharacter((shift ? 'A' : 'a') + i);
+    // Report a key's down state, and if it produces text, the character it typed
+    // this frame. base/shifted are the US-QWERTY glyphs (0 = key emits no text).
+    auto key = [&](ForgeKey fk, ImGuiKey ik, char base = 0, char shifted = 0) {
+        io.AddKeyEvent(ik, forge_input_isKeyDown(fk));
+        if (base && forge_input_isKeyPressed(fk)) {
+            io.AddInputCharacter(shift ? shifted : base);
         }
-    }
+    };
 
-    if (forge_input_isKeyPressed(ForgeKey_Space)) {
-        io.AddInputCharacter(' ');
+    // Letters, digits and function keys are contiguous in ForgeKey (USB HID
+    // usage), ImGuiKey and ASCII, so they map by offset.
+    for (int i = 0; i < 26; ++i) {
+        key((ForgeKey)(ForgeKey_A + i), (ImGuiKey)(ImGuiKey_A + i), 'a' + i, 'A' + i);
     }
 
     static const char *kDigits = "1234567890", *kShifted = "!@#$%^&*()";
     for (int i = 0; i < 9; ++i) {
-        if (forge_input_isKeyPressed((ForgeKey)(ForgeKey_1 + i))) {
-            io.AddInputCharacter(shift ? kShifted[i] : kDigits[i]);
-        }
+        key((ForgeKey)(ForgeKey_1 + i), (ImGuiKey)(ImGuiKey_1 + i), kDigits[i], kShifted[i]);
+    }
+    key(ForgeKey_0, ImGuiKey_0, '0', ')');
+
+    for (int i = 0; i < 12; ++i) {
+        key((ForgeKey)(ForgeKey_F1 + i), (ImGuiKey)(ImGuiKey_F1 + i));
     }
 
-    if (forge_input_isKeyPressed(ForgeKey_0)) {
-        io.AddInputCharacter(shift ? ')' : '0');
-    }
+    // Punctuation — the '-', '.', ',', 'e' (a letter, above) etc. that numeric
+    // input fields need.
+    key(ForgeKey_Space, ImGuiKey_Space, ' ', ' ');
+    key(ForgeKey_Minus, ImGuiKey_Minus, '-', '_');
+    key(ForgeKey_Equals, ImGuiKey_Equal, '=', '+');
+    key(ForgeKey_Comma, ImGuiKey_Comma, ',', '<');
+    key(ForgeKey_Period, ImGuiKey_Period, '.', '>');
+    key(ForgeKey_Slash, ImGuiKey_Slash, '/', '?');
+    key(ForgeKey_Semicolon, ImGuiKey_Semicolon, ';', ':');
+    key(ForgeKey_Apostrophe, ImGuiKey_Apostrophe, '\'', '"');
+    key(ForgeKey_LeftBracket, ImGuiKey_LeftBracket, '[', '{');
+    key(ForgeKey_RightBracket, ImGuiKey_RightBracket, ']', '}');
+    key(ForgeKey_Backslash, ImGuiKey_Backslash, '\\', '|');
+    key(ForgeKey_Grave, ImGuiKey_GraveAccent, '`', '~');
+
+    // Editing and navigation keys (no text).
+    key(ForgeKey_Tab, ImGuiKey_Tab);
+    key(ForgeKey_Enter, ImGuiKey_Enter);
+    key(ForgeKey_Escape, ImGuiKey_Escape);
+    key(ForgeKey_Backspace, ImGuiKey_Backspace);
+    key(ForgeKey_Delete, ImGuiKey_Delete);
+    key(ForgeKey_Insert, ImGuiKey_Insert);
+    key(ForgeKey_Home, ImGuiKey_Home);
+    key(ForgeKey_End, ImGuiKey_End);
+    key(ForgeKey_PageUp, ImGuiKey_PageUp);
+    key(ForgeKey_PageDown, ImGuiKey_PageDown);
+    key(ForgeKey_CapsLock, ImGuiKey_CapsLock);
+    key(ForgeKey_Left, ImGuiKey_LeftArrow);
+    key(ForgeKey_Right, ImGuiKey_RightArrow);
+    key(ForgeKey_Up, ImGuiKey_UpArrow);
+    key(ForgeKey_Down, ImGuiKey_DownArrow);
 }
 
 IMGUI_IMPL_API void ImGui_ImplNVN_NewFrame()
