@@ -65,6 +65,7 @@ public:
     }
 
     void initialize();
+    void setupStyle();
     bool isInitialized() const { return m_initialized; }
 
     void render();
@@ -223,21 +224,113 @@ void Graphics::initialize()
     ImGui::StyleColorsDark();
     ImGui::SetAllocatorFunctions(customMemAlloc, customMemFree);
 
+    const auto font_size = forge_config_get()->menu_font_size;
+
     auto& style = ImGui::GetStyle();
     style.ScaleAllSizes(1.0f);
     style.FontScaleDpi = 1.0f;
-    style.FontSizeBase = 16.0f;
+    style.FontSizeBase = font_size;
 
     ImGui_ImplNVN_Init(m_device, m_queue, m_swapChainTextures);
 
     auto& io = ImGui::GetIO();
-    io.Fonts->AddFontFromFileTTF(kDefaultFontPath, 16.0f);
+    io.Fonts->AddFontFromFileTTF(kDefaultFontPath, font_size);
+
+    setupStyle();
 
     forge_plugin_onImGuiInit(ImGui::GetCurrentContext(), (void*)customMemAlloc, (void*)customMemFree);
 
     m_initialized = true;
 
     forge_log_info("Graphics Initialized");
+}
+
+void Graphics::setupStyle()
+{
+    auto& style = ImGui::GetStyle();
+
+    style.WindowPadding = { 12.0f, 12.0f };
+    style.WindowRounding = 2.0f;
+    style.WindowBorderSize = 1.0f;
+    style.WindowMinSize = { 20.0f, 20.0f };
+    style.WindowTitleAlign = { 0.5f, 0.5f };
+    style.WindowMenuButtonPosition = ImGuiDir_None;
+    style.ChildRounding = 0.0f;
+    style.ChildBorderSize = 1.0f;
+    style.PopupRounding = 0.0f;
+    style.PopupBorderSize = 1.0f;
+    style.FramePadding = { 6.0f, 6.0f };
+    style.FrameRounding = 1.0f;
+    style.FrameBorderSize = 0.0f;
+    style.ItemSpacing = { 12.0f, 6.0f };
+    style.ItemInnerSpacing = { 6.0f, 3.0f };
+    style.CellPadding = { 12.0f, 6.0f };
+    style.IndentSpacing = 20.0f;
+    style.ColumnsMinSpacing = 6.0f;
+    style.ScrollbarSize = 12.0f;
+    style.ScrollbarRounding = 0.0f;
+    style.GrabMinSize = 12.0f;
+    style.GrabRounding = 1.0f;
+    style.TabRounding = 0.0f;
+    style.TabBorderSize = 0.0f;
+    style.TabCloseButtonMinWidthUnselected = 0.0f;
+    style.ColorButtonPosition = ImGuiDir_Right;
+    style.ButtonTextAlign = { 0.5f, 0.5f };
+    style.SelectableTextAlign = { 0.0f, 0.0f };
+
+    style.Colors[ImGuiCol_Text] = { 1.0f, 1.0f, 1.0f, 1.0f };
+    style.Colors[ImGuiCol_TextDisabled] = { 0.2745098173618317f, 0.3176470696926117f, 0.4509803950786591f, 1.0f };
+    style.Colors[ImGuiCol_WindowBg] = { 0.0784313753247261f, 0.08627451211214066f, 0.1019607856869698f, 1.0f };
+    style.Colors[ImGuiCol_ChildBg] = { 0.0784313753247261f, 0.08627451211214066f, 0.1019607856869698f, 1.0f };
+    style.Colors[ImGuiCol_PopupBg] = { 0.0784313753247261f, 0.08627451211214066f, 0.1019607856869698f, 1.0f };
+    style.Colors[ImGuiCol_Border] = { 0.1568627506494522f, 0.168627455830574f, 0.1921568661928177f, 1.0f };
+    style.Colors[ImGuiCol_BorderShadow] = { 0.0784313753247261f, 0.08627451211214066f, 0.1019607856869698f, 1.0f };
+    style.Colors[ImGuiCol_FrameBg] = { 0.1176470592617989f, 0.1333333402872086f, 0.1490196138620377f, 1.0f };
+    style.Colors[ImGuiCol_FrameBgHovered] = { 0.1568627506494522f, 0.168627455830574f, 0.1921568661928177f, 1.0f };
+    style.Colors[ImGuiCol_FrameBgActive] = { 0.2352941185235977f, 0.2156862765550613f, 0.5960784554481506f, 1.0f };
+    style.Colors[ImGuiCol_TitleBg] = { 0.0470588244497776f, 0.05490196123719215f, 0.07058823853731155f, 1.0f };
+    style.Colors[ImGuiCol_TitleBgActive] = { 0.0470588244497776f, 0.05490196123719215f, 0.07058823853731155f, 1.0f };
+    style.Colors[ImGuiCol_TitleBgCollapsed] = { 0.0784313753247261f, 0.08627451211214066f, 0.1019607856869698f, 1.0f };
+    style.Colors[ImGuiCol_MenuBarBg] = { 0.09803921729326248f, 0.105882354080677f, 0.1215686276555061f, 1.0f };
+    style.Colors[ImGuiCol_ScrollbarBg] = { 0.0470588244497776f, 0.05490196123719215f, 0.07058823853731155f, 1.0f };
+    style.Colors[ImGuiCol_ScrollbarGrab] = { 0.1176470592617989f, 0.1333333402872086f, 0.1490196138620377f, 1.0f };
+    style.Colors[ImGuiCol_ScrollbarGrabHovered] = { 0.1568627506494522f, 0.168627455830574f, 0.1921568661928177f, 1.0f };
+    style.Colors[ImGuiCol_ScrollbarGrabActive] = { 0.1176470592617989f, 0.1333333402872086f, 0.1490196138620377f, 1.0f };
+    style.Colors[ImGuiCol_CheckMark] = { 0.4980392158031464f, 0.5137255191802979f, 1.0f, 1.0f };
+    style.Colors[ImGuiCol_SliderGrab] = { 0.4980392158031464f, 0.5137255191802979f, 1.0f, 1.0f };
+    style.Colors[ImGuiCol_SliderGrabActive] = { 0.5372549295425415f, 0.5529412031173706f, 1.0f, 1.0f };
+    style.Colors[ImGuiCol_Button] = { 0.257f, 0.267f, 0.554f, 1.0f };
+    style.Colors[ImGuiCol_ButtonHovered] = { 0.196078434586525f, 0.1764705926179886f, 0.5450980663299561f, 1.0f };
+    style.Colors[ImGuiCol_ButtonActive] = { 0.2352941185235977f, 0.2156862765550613f, 0.5960784554481506f, 1.0f };
+    style.Colors[ImGuiCol_Header] = { 0.1176470592617989f, 0.1333333402872086f, 0.1490196138620377f, 1.0f };
+    style.Colors[ImGuiCol_HeaderHovered] = { 0.196078434586525f, 0.1764705926179886f, 0.5450980663299561f, 1.0f };
+    style.Colors[ImGuiCol_HeaderActive] = { 0.2352941185235977f, 0.2156862765550613f, 0.5960784554481506f, 1.0f };
+    style.Colors[ImGuiCol_Separator] = { 0.1568627506494522f, 0.1843137294054031f, 0.250980406999588f, 1.0f };
+    style.Colors[ImGuiCol_SeparatorHovered] = { 0.1568627506494522f, 0.1843137294054031f, 0.250980406999588f, 1.0f };
+    style.Colors[ImGuiCol_SeparatorActive] = { 0.1568627506494522f, 0.1843137294054031f, 0.250980406999588f, 1.0f };
+    style.Colors[ImGuiCol_ResizeGrip] = { 0.1176470592617989f, 0.1333333402872086f, 0.1490196138620377f, 1.0f };
+    style.Colors[ImGuiCol_ResizeGripHovered] = { 0.196078434586525f, 0.1764705926179886f, 0.5450980663299561f, 1.0f };
+    style.Colors[ImGuiCol_ResizeGripActive] = { 0.2352941185235977f, 0.2156862765550613f, 0.5960784554481506f, 1.0f };
+    style.Colors[ImGuiCol_Tab] = { 0.0470588244497776f, 0.05490196123719215f, 0.07058823853731155f, 1.0f };
+    style.Colors[ImGuiCol_TabHovered] = { 0.1176470592617989f, 0.1333333402872086f, 0.1490196138620377f, 1.0f };
+    style.Colors[ImGuiCol_TabActive] = { 0.09803921729326248f, 0.105882354080677f, 0.1215686276555061f, 1.0f };
+    style.Colors[ImGuiCol_TabUnfocused] = { 0.0470588244497776f, 0.05490196123719215f, 0.07058823853731155f, 1.0f };
+    style.Colors[ImGuiCol_TabUnfocusedActive] = { 0.0784313753247261f, 0.08627451211214066f, 0.1019607856869698f, 1.0f };
+    style.Colors[ImGuiCol_PlotLines] = { 0.5215686559677124f, 0.6000000238418579f, 0.7019608020782471f, 1.0f };
+    style.Colors[ImGuiCol_PlotLinesHovered] = { 0.03921568766236305f, 0.9803921580314636f, 0.9803921580314636f, 1.0f };
+    style.Colors[ImGuiCol_PlotHistogram] = { 1.0f, 0.2901960909366608f, 0.5960784554481506f, 1.0f };
+    style.Colors[ImGuiCol_PlotHistogramHovered] = { 0.9960784316062927f, 0.4745098054409027f, 0.6980392336845398f, 1.0f };
+    style.Colors[ImGuiCol_TableHeaderBg] = { 0.0470588244497776f, 0.05490196123719215f, 0.07058823853731155f, 1.0f };
+    style.Colors[ImGuiCol_TableBorderStrong] = { 0.0470588244497776f, 0.05490196123719215f, 0.07058823853731155f, 1.0f };
+    style.Colors[ImGuiCol_TableBorderLight] = { 0.0f, 0.0f, 0.0f, 1.0f };
+    style.Colors[ImGuiCol_TableRowBg] = { 0.1176470592617989f, 0.1333333402872086f, 0.1490196138620377f, 1.0f };
+    style.Colors[ImGuiCol_TableRowBgAlt] = { 0.09803921729326248f, 0.105882354080677f, 0.1215686276555061f, 1.0f };
+    style.Colors[ImGuiCol_TextSelectedBg] = { 0.2352941185235977f, 0.2156862765550613f, 0.5960784554481506f, 1.0f };
+    style.Colors[ImGuiCol_DragDropTarget] = { 0.4980392158031464f, 0.5137255191802979f, 1.0f, 1.0f };
+    style.Colors[ImGuiCol_NavHighlight] = { 0.4980392158031464f, 0.5137255191802979f, 1.0f, 1.0f };
+    style.Colors[ImGuiCol_NavWindowingHighlight] = { 0.4980392158031464f, 0.5137255191802979f, 1.0f, 1.0f };
+    style.Colors[ImGuiCol_NavWindowingDimBg] = { 0.196078434586525f, 0.1764705926179886f, 0.5450980663299561f, 0.501960813999176f };
+    style.Colors[ImGuiCol_ModalWindowDimBg] = { 0.196078434586525f, 0.1764705926179886f, 0.5450980663299561f, 0.501960813999176f };
 }
 
 void Graphics::render()
@@ -252,8 +345,8 @@ void Graphics::render()
             if (ImGui::CollapsingHeader("About Forge")) {
                 ImGui::Text("Version: %s", FORGE_VERSION);
                 ImGui::SeparatorText("Developers");
-                ImGui::BulletText("jeffi2287");
                 ImGui::BulletText("Fexty");
+                ImGui::BulletText("jeffi2287");
 
                 ImGui::SeparatorText("Libraries Used");
                 ImGui::BulletText("devkitARM/libnx (32-bit)");

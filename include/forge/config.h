@@ -11,6 +11,7 @@ extern "C" {
 typedef struct Config {
     const char* log_level;
     int menu_key;
+    float menu_font_size;
 } Config;
 
 Config forge_config_createDefault(void);

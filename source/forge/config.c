@@ -58,6 +58,7 @@ Result forge_config_load(void)
 
     s_config.log_level = strdup(iniparser_getstring(dict, "log:level", "info"));
     s_config.menu_key = iniparser_getint(dict, "menu:key", 66);
+    s_config.menu_font_size = (float)iniparser_getdouble(dict, "menu:font_size", 12.0);
 
     iniparser_freedict(dict);
 
