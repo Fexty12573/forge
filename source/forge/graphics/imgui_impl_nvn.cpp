@@ -882,6 +882,11 @@ IMGUI_IMPL_API void ImGui_ImplNVN_RenderDrawData(nvn::Queue* queue, ImDrawData* 
     const ImVec2 clipScale = drawData->FramebufferScale;
     const auto rt = bd->swapChainTextures[textureIndex];
 
+    // Draw lists are packed back to back in the vertex/index buffers,
+    // so offset each command by the size of the lists before it.
+    unsigned int globalVtxOffset = 0;
+    unsigned int globalIdxOffset = 0;
+
     for (const auto drawList : drawData->CmdLists) {
         for (const auto& cmd : drawList->CmdBuffer) {
             if (cmd.UserCallback != nullptr) {
@@ -917,10 +922,13 @@ IMGUI_IMPL_API void ImGui_ImplNVN_RenderDrawData(nvn::Queue* queue, ImDrawData* 
                     nvn::DrawPrimitive::TRIANGLES,
                     sizeof(ImDrawIdx) == 2 ? nvn::IndexType::UNSIGNED_SHORT : nvn::IndexType::UNSIGNED_INT,
                     static_cast<int>(cmd.ElemCount),
-                    idxBufferAddr + (cmd.IdxOffset * sizeof(ImDrawIdx)),
-                    cmd.VtxOffset);
+                    idxBufferAddr + ((cmd.IdxOffset + globalIdxOffset) * sizeof(ImDrawIdx)),
+                    static_cast<int>(cmd.VtxOffset + globalVtxOffset));
             }
         }
+        
+        globalVtxOffset += static_cast<unsigned int>(drawList->VtxBuffer.Size);
+        globalIdxOffset += static_cast<unsigned int>(drawList->IdxBuffer.Size);
     }
 
     const auto handle = bd->cmdBuffer.EndRecording();
