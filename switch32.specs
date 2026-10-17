@@ -4,4 +4,5 @@
 %(old_link) -T ../switch32.ld --shared --gc-sections --build-id=sha1
 
 *startfile:
-crti%O%s crtbegin%O%s
+
+*endfile:

@@ -1,0 +1,22 @@
+--- a/src/iniparser.c
++++ b/src/iniparser.c
+@@ -116,6 +116,11 @@
+   @brief    Default error callback for iniparser: wraps `fprintf(stderr, ...)`.
+  */
+ /*--------------------------------------------------------------------------*/
++#ifdef FORGE_INJECTED_NSO
++/* The game's musl does not provide newlib's stderr / __getreent. */
++extern int errorCallback(const char *format, ...);
++#define default_error_callback errorCallback
++#else
+ static int default_error_callback(const char *format, ...)
+ {
+   int ret;
+@@ -125,6 +130,7 @@
+   va_end(argptr);
+   return ret;
+ }
++#endif
+ 
+ static int (*iniparser_error_callback)(const char*, ...) = default_error_callback;
+ 

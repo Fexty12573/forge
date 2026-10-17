@@ -3,6 +3,20 @@
 #include <ctype.h>
 #include <stdlib.h>
 
+extern int* __errno_location(void);
+
+// libm uses the newlib spelling; MHGU's musl exports __errno_location.
+int* __errno(void)
+{
+    return __errno_location();
+}
+
+void forge_memoryBarrier(void) __asm__("__sync_synchronize");
+void forge_memoryBarrier(void)
+{
+    __asm__ volatile("dmb ish" ::: "memory");
+}
+
 void NX_NORETURN __assert_fail(const char* __assertion, const char* __file, unsigned __line, const char* __function);
 
 void __assert_func(const char* file, int line, const char* function, const char* expr)

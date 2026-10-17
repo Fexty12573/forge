@@ -1,0 +1,82 @@
+[
+  {
+    "path": "src/c++98/tree.cc",
+    "url": "https://raw.githubusercontent.com/gcc-mirror/gcc/releases/gcc-16.1.0/libstdc++-v3/src/c++98/tree.cc",
+    "sha256": "5b26005a3d13853a08136772e7045bfb1613ea241027a76837dab8c56328ba95"
+  },
+  {
+    "path": "src/c++11/hashtable_c++0x.cc",
+    "url": "https://raw.githubusercontent.com/gcc-mirror/gcc/releases/gcc-16.1.0/libstdc++-v3/src/c++11/hashtable_c++0x.cc",
+    "sha256": "5306ef6e326d790bdbe7e29e7e87e3012cea7edec6b60fa112fe55ad23f44ac6"
+  },
+  {
+    "path": "src/c++11/functexcept.cc",
+    "url": "https://raw.githubusercontent.com/gcc-mirror/gcc/releases/gcc-16.1.0/libstdc++-v3/src/c++11/functexcept.cc",
+    "sha256": "70bf4263b95eb567b9b8542714aae90b81444a4407496a6e90927e2866173f69"
+  },
+  {
+    "path": "src/shared/hashtable-aux.cc",
+    "url": "https://raw.githubusercontent.com/gcc-mirror/gcc/releases/gcc-16.1.0/libstdc++-v3/src/shared/hashtable-aux.cc",
+    "sha256": "5b4625a69c6daccf2bc17db976f25b6fa1c36be78b6847c9be870ea2325f982b"
+  },
+  {
+    "path": "libsupc++/new_op.cc",
+    "url": "https://raw.githubusercontent.com/gcc-mirror/gcc/releases/gcc-16.1.0/libstdc++-v3/libsupc++/new_op.cc",
+    "sha256": "9d594ffd52eb03e21e00436caabe5123babbb6a05dce5b4ecc5ecbb9fff0b13f"
+  },
+  {
+    "path": "libsupc++/new_opv.cc",
+    "url": "https://raw.githubusercontent.com/gcc-mirror/gcc/releases/gcc-16.1.0/libstdc++-v3/libsupc++/new_opv.cc",
+    "sha256": "3229807f61be5a78fb010df5e9420b992baa2fb9470ce149024a93ca8ab8e438"
+  },
+  {
+    "path": "libsupc++/new_opa.cc",
+    "url": "https://raw.githubusercontent.com/gcc-mirror/gcc/releases/gcc-16.1.0/libstdc++-v3/libsupc++/new_opa.cc",
+    "sha256": "d627537aefa2322ead4eef1013bff53e0910f97f9ed1c977f0f9374a4cdd689b"
+  },
+  {
+    "path": "libsupc++/new_opva.cc",
+    "url": "https://raw.githubusercontent.com/gcc-mirror/gcc/releases/gcc-16.1.0/libstdc++-v3/libsupc++/new_opva.cc",
+    "sha256": "0196c7750e99a46eac36f95dcf7ab5d2b8179715894f4cc77e2d31d64e5c60b8"
+  },
+  {
+    "path": "libsupc++/del_opv.cc",
+    "url": "https://raw.githubusercontent.com/gcc-mirror/gcc/releases/gcc-16.1.0/libstdc++-v3/libsupc++/del_opv.cc",
+    "sha256": "2b826fd7fb69f6309ce010c14c2391a40c82d420c10b784acb05384fcd518b89"
+  },
+  {
+    "path": "libsupc++/del_ops.cc",
+    "url": "https://raw.githubusercontent.com/gcc-mirror/gcc/releases/gcc-16.1.0/libstdc++-v3/libsupc++/del_ops.cc",
+    "sha256": "e7180952d7f64eba6dc487099a6b1ad3edcfb6b0c0fe8062841c10a1219efc12"
+  },
+  {
+    "path": "libsupc++/del_opvs.cc",
+    "url": "https://raw.githubusercontent.com/gcc-mirror/gcc/releases/gcc-16.1.0/libstdc++-v3/libsupc++/del_opvs.cc",
+    "sha256": "1032574136f1c1e597d30592edf3207211adf7c7f4ee1284adcca2d5407b6162"
+  },
+  {
+    "path": "libsupc++/del_opa.cc",
+    "url": "https://raw.githubusercontent.com/gcc-mirror/gcc/releases/gcc-16.1.0/libstdc++-v3/libsupc++/del_opa.cc",
+    "sha256": "1aea1fca001ab3d4e7a5ced40bd1d8bbb2b3ad5bf509358217f9762f77053421"
+  },
+  {
+    "path": "libsupc++/del_opva.cc",
+    "url": "https://raw.githubusercontent.com/gcc-mirror/gcc/releases/gcc-16.1.0/libstdc++-v3/libsupc++/del_opva.cc",
+    "sha256": "eb335889c3da8cec8aec1998f859acdc81e55e8a4ea0ddab7f85c50ebcfebf7b"
+  },
+  {
+    "path": "libsupc++/del_opsa.cc",
+    "url": "https://raw.githubusercontent.com/gcc-mirror/gcc/releases/gcc-16.1.0/libstdc++-v3/libsupc++/del_opsa.cc",
+    "sha256": "4c2f137b0349267ea7674c67e8f351b825a7c8062e233fcd0d3cd334e284216a"
+  },
+  {
+    "path": "libsupc++/del_opvsa.cc",
+    "url": "https://raw.githubusercontent.com/gcc-mirror/gcc/releases/gcc-16.1.0/libstdc++-v3/libsupc++/del_opvsa.cc",
+    "sha256": "6efd91624cf0222436dc8af0e235b7fe2860beddde5c66451ce6f81ba7cbf6c9"
+  },
+  {
+    "path": "libsupc++/del_op.cc",
+    "url": "https://raw.githubusercontent.com/gcc-mirror/gcc/releases/gcc-16.1.0/libstdc++-v3/libsupc++/del_op.cc",
+    "sha256": "6440b11173ad7d80a35a4912a28da814b6059ec4b8aa332765577b2a4ab3a6ea"
+  }
+]

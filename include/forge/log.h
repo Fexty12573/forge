@@ -14,6 +14,8 @@ enum LogLevel {
 };
 
 void forge_log_init(const Config* config);
+void forge_log_openFile(void);
+void forge_log_writeFile(const char* text, size_t size);
 void forge_log(enum LogLevel level, const char* format, ...);
 enum LogLevel forge_log_getLevel(void);
 void forge_log_trace(const char* format, ...);

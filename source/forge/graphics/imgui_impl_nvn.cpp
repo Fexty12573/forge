@@ -104,6 +104,11 @@ struct ImGui_ImplNVN_Texture {
     int descriptorSlot;
 };
 
+// NVN writes this opaque object with ARM doubleword stores on real hardware.
+static_assert(alignof(nvn::CommandBuffer) >= 8);
+static_assert(sizeof(nvn::CommandBuffer) == 160);
+static_assert(sizeof(nvn::Format) == sizeof(int));
+
 static void GetProjOrtho(Mat4& out, float l, float r, float b, float t, float near, float far)
 {
     std::memset(&out, 0, sizeof(out));

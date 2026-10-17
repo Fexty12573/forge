@@ -1,15 +1,19 @@
 [submodule "libs/libnx"]
 	path = libs/libnx
 	url = https://github.com/jeffi6375/libnx.git
+	# Working-tree injection changes are recorded in patches/.
+	ignore = dirty
 [submodule "libs/switch-tools"]
 	path = libs/switch-tools
 	url = https://github.com/Fexty12573/switch-tools
 [submodule "libs/iniparser"]
 	path = libs/iniparser
 	url = https://github.com/ndevilla/iniparser
+	ignore = dirty
 [submodule "libs/nnheaders"]
 	path = libs/nnheaders
 	url = https://github.com/open-ead/nnheaders
+	ignore = dirty
 [submodule "libs/cimgui"]
 	path = libs/cimgui
 	url = https://github.com/cimgui/cimgui.git

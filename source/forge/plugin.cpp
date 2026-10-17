@@ -103,6 +103,7 @@ struct Plugin {
 
 struct PluginLoader {
     std::vector<Plugin> plugins;
+    AlignedBuffer<PAGE_SIZE> registration_data;
     nn::ro::RegistrationInfo registration_info;
     Hook update_hook;
     void (*original_update)(void*);
@@ -213,7 +214,7 @@ extern "C" void forge_plugin_loadPlugins(void)
 
             forge_log_debug("Found plugin file: %s", path);
 
-            Plugin plugin;
+            Plugin plugin {};
             plugin.path = path;
 
             plugin.data = forge_loadPluginData(path, &plugin.data_size);
@@ -237,7 +238,10 @@ extern "C" void forge_plugin_loadPlugins(void)
 
             nn::crypto::GenerateSha256Hash(&plugin.hash, sizeof(ShaHash), nro_header, nro_header->size);
 
-            plugin_hashes.insert(plugin.hash);
+            if (!plugin_hashes.insert(plugin.hash).second) {
+                forge_log_trace("Duplicate plugin image skipped: %s", path);
+                continue;
+            }
             s_pluginLoader.plugins.emplace_back(std::move(plugin));
         }
     }
@@ -247,7 +251,10 @@ extern "C" void forge_plugin_loadPlugins(void)
     forge_log_debug("Preparing to load %zu plugins", s_pluginLoader.plugins.size());
 
     const auto nrr_size = forge_alignUp(sizeof(nn::ro::NrrHeader) + s_pluginLoader.plugins.size() * sizeof(ShaHash), PAGE_SIZE);
-    AlignedBuffer<PAGE_SIZE> nrr_data = forge_allocAligned<PAGE_SIZE>(nrr_size);
+    // ro keeps this registration alive after plugin initialization returns.
+    s_pluginLoader.registration_data = forge_allocAligned<PAGE_SIZE>(nrr_size);
+    auto& nrr_data = s_pluginLoader.registration_data;
+    std::memset(nrr_data.get(), 0, nrr_size);
 
     auto nrr_header = (nn::ro::NrrHeader*)nrr_data.get();
     *nrr_header = {
@@ -271,8 +278,10 @@ extern "C" void forge_plugin_loadPlugins(void)
         return;
     }
 
+    std::set<ShaHash> failed_loads;
     for (auto& plugin : s_pluginLoader.plugins) {
-        forge_log_info("Loading plugin %s", plugin.path.c_str());
+        forge_log_trace("LoadModule begin: %s image=%p size=0x%zX bss=0x%zX",
+            plugin.path.c_str(), plugin.data.get(), plugin.data_size, plugin.bss_size);
 
         plugin.bss = forge_allocAligned<PAGE_SIZE>(plugin.bss_size);
         r = nn::ro::LoadModule(
@@ -281,15 +290,24 @@ extern "C" void forge_plugin_loadPlugins(void)
             plugin.bss.get(),
             plugin.bss_size,
             nn::ro::BindFlag_Now);
+        forge_log_trace("LoadModule result: %s rc=0x%08X module=%u description=%u",
+            plugin.path.c_str(), r, r & 0x1FF, (r >> 9) & 0x1FFF);
         if (R_FAILED(r)) {
             forge_log_error("Failed to load plugin %s: 0x%08X", plugin.path.c_str(), r);
+            failed_loads.insert(plugin.hash);
             continue;
         }
     }
 
+    // A failed LoadModule leaves ModuleObject undefined. Never pass it to ro.
+    std::erase_if(s_pluginLoader.plugins, [&failed_loads](const Plugin& plugin) {
+        return failed_loads.contains(plugin.hash);
+    });
+
     std::set<ShaHash> to_remove;
     for (auto& plugin : s_pluginLoader.plugins) {
-        forge_log_debug("Resolving symbols for plugin %s", plugin.path.c_str());
+        forge_log_trace("Resolving symbols: %s object=%p state=%u",
+            plugin.path.c_str(), plugin.module.ModuleObject, plugin.module.State);
 
         plugin.events.on_load = plugin.getSymbol<void(PluginInitParam*)>("forge_onLoad");
         plugin.events.on_init = plugin.getSymbol<void()>("forge_onInit");
@@ -324,14 +342,17 @@ extern "C" void forge_plugin_loadPlugins(void)
         }
 
         if (plugin.events.on_init) {
-            forge_log_debug("Initializing plugin %s", plugin.path.c_str());
+            forge_log_trace("Initializing plugin: %s", plugin.path.c_str());
             plugin.events.on_init();
         }
+        forge_log_trace("Plugin ready: %s", plugin.path.c_str());
     }
 
     std::erase_if(s_pluginLoader.plugins, [&to_remove](const Plugin& plugin) {
         return to_remove.contains(plugin.hash);
     });
+    forge_log_trace("Plugin loading finished: %zu active, %zu failed",
+        s_pluginLoader.plugins.size(), failed_loads.size());
 }
 
 extern "C" void forge_plugin_renderPluginInfo(void)

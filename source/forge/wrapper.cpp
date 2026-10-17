@@ -64,3 +64,8 @@ extern "C" void forge_nnosUnlockMutex(void* mutex)
 {
     nn::os::UnlockMutex(static_cast<nn::os::MutexType*>(mutex));
 }
+
+extern "C" bool forge_nnosIsMutexLockedByCurrentThread(const void* mutex)
+{
+    return nn::os::IsMutexLockedByCurrentThread(static_cast<const nn::os::MutexType*>(mutex));
+}
