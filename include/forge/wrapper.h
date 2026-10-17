@@ -18,6 +18,7 @@ void forge_nnosClearLightEvent(void* event);
 void forge_nnosInitializeMutex(void* mutex, bool recursive);
 void forge_nnosLockMutex(void* mutex);
 void forge_nnosUnlockMutex(void* mutex);
+bool forge_nnosIsMutexLockedByCurrentThread(const void* mutex);
 
 #ifdef __cplusplus
 }

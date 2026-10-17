@@ -21,6 +21,7 @@ void sApp_run(void* app)
         forge_log_trace("[forge] Failed to load config, using defaults");
     }
 
+    forge_log_openFile();
     forge_log_init(forge_config_get());
     forge_singleton_resolve();
 

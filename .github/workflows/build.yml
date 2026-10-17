@@ -20,10 +20,10 @@ jobs:
       DEVKITPRO: /opt/devkitpro
 
     steps:
-      - name: Install git and lz4
+      - name: Install build helpers
         run: |
           apt update
-          apt install git liblz4-dev -y
+          apt install git liblz4-dev python3 -y
 
       - name: Checkout
         uses: actions/checkout@v6
@@ -39,7 +39,7 @@ jobs:
         run: |
           set -euo pipefail
           source /etc/profile.d/devkit-env.sh
-          make -j$(nproc)
+          JOBS=$(nproc) bash build-hardware.sh
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v7

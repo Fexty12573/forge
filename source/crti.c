@@ -19,7 +19,8 @@ void forge_init(void)
     for (FuncPtr* func = __init_array_start__; func != __init_array_end__; func++)
         (*func)();
 
-    envSetup(NULL, forge_proc_getHandle(), NULL);
+    // This module uses SDK threads; the second argument is a thread, not a process.
+    envSetup(NULL, CUR_THREAD_HANDLE, NULL);
     virtmemSetup();
     forge_mem_init();
     forge_main();

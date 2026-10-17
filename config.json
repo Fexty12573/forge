@@ -131,7 +131,10 @@
                 "svcFlushProcessDataCache": "0x5f",
                 "svcSetProcessMemoryPermission": "0x73",
                 "svcMapProcessMemory": "0x74",
-                "svcMapProcessCodeMemory": "0x77"
+                "svcMapProcessCodeMemory": "0x77",
+                "svcCreateCodeMemory": "0x4b",
+                "svcControlCodeMemory": "0x4c",
+                "svcUnmapProcessMemory": "0x75"
             }
         },
         {

@@ -1,0 +1,51 @@
+[
+  {
+    "repository": "Fexty12573/forge",
+    "commit": "b23e114a23f41c9a8e2fd34b2f4df2a2102d0ee1",
+    "destination": "",
+    "archive_sha256": "fbc1734679a0ef70a4836a6f2a410649e7cedc099cfc55cf680ceb57afeffd03",
+    "bytes": 171515
+  },
+  {
+    "repository": "cimgui/cimgui",
+    "commit": "d298666861ebf00dcfeb2407409931c04e47e33c",
+    "destination": "libs/cimgui",
+    "archive_sha256": "d15fb8d5cf61d4dc490945957d7096f1bb4a9618d74e6ffc4905dcae9d18fd9d",
+    "bytes": 469903
+  },
+  {
+    "repository": "ndevilla/iniparser",
+    "commit": "4bef811283e0ec1658c60e09950bd5a1ddc92e4b",
+    "destination": "libs/iniparser",
+    "archive_sha256": "5defaf2f7ce0af1bb30442bf774493ce68c5585b758a64c7fc42f4aec8ac2c0c",
+    "bytes": 57860
+  },
+  {
+    "repository": "jeffi6375/libnx",
+    "commit": "03d19e0d1f754d9ca18424cdc4239addf2f99e90",
+    "destination": "libs/libnx",
+    "archive_sha256": "2b510e96ce36953f24ca556ee766b499fee01a77140913971becc67786a68403",
+    "bytes": 953372
+  },
+  {
+    "repository": "open-ead/nnheaders",
+    "commit": "92b288975ad26a089dac4c0a405cfaec06d81297",
+    "destination": "libs/nnheaders",
+    "archive_sha256": "451d4189d9b2c0b0c9027fc5e5c64cb5572a3707996933a6038358863c080b99",
+    "bytes": 357036
+  },
+  {
+    "repository": "Fexty12573/switch-tools",
+    "commit": "e3d3e278e77633c9519028e1ea8a72eac7ea5678",
+    "destination": "libs/switch-tools",
+    "archive_sha256": "4d9e17b65f8b5a915b61c718b5b161e181e8cb6a8515c0e031312574ff3fac4c",
+    "bytes": 81696
+  },
+  {
+    "repository": "ocornut/imgui",
+    "commit": "8936b58fe26e8c3da834b8f60b06511d537b4c63",
+    "destination": "libs/cimgui/imgui",
+    "archive_sha256": "55d616240e72059a77b4744ce4c1a50e42e87cf2269301a477ce38d7b87253e5",
+    "bytes": 2287958
+  }
+]
