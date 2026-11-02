@@ -6,6 +6,7 @@ extern "C" void nnosInitializeMutex(nn::os::MutexType* mutex, bool recursive, in
 
 namespace nn::os {
 bool TryWaitLightEvent(LightEventType* event) noexcept;
+void InitializeMutex(MutexType*, bool, int);
 }
 
 static_assert(sizeof(nn::os::MutexType) == FORGE_NNOS_MUTEX_SIZE);
