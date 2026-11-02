@@ -199,6 +199,8 @@ void customQueuePresentTexture(NVNqueue* queue, NVNwindow* window, int textureIn
         gfx->initialize();
     }
 
+    forge_plugin_onNvnRender(window, textureIndex);
+
     ImGui_ImplNVN_NewFrame();
 
     ImGui::NewFrame();
@@ -231,6 +233,8 @@ void Graphics::initialize()
 
     nvn::nvnLoadCPPProcs(m_device, (nvn::DeviceGetProcAddressFunc)s_defaultNvnGetProcAddress);
 
+    forge_plugin_onNvnInit(reinterpret_cast<void*>(s_defaultNvnGetProcAddress), m_device, m_queue);
+
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
     ImGui::StyleColorsDark();
@@ -248,11 +252,10 @@ void Graphics::initialize()
     auto& io = ImGui::GetIO();
     io.Fonts->AddFontFromFileTTF(kDefaultFontPath, font_size);
 
-    forge_plugin_onNvnInit(reinterpret_cast<void*>(s_defaultNvnGetProcAddress), m_device, m_queue);
-
     setupStyle();
 
     forge_plugin_onImGuiInit(ImGui::GetCurrentContext(), (void*)customMemAlloc, (void*)customMemFree);
+    forge_plugin_onNvnReady();
 
     m_initialized = true;
 

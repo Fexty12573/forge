@@ -73,6 +73,8 @@ struct PluginEvents {
     void (*on_init)();
     void (*on_update)(float dt);
     void (*on_nvn_init)(void* get_proc_addr, void* device, void* queue);
+    void (*on_nvn_ready)();
+    void (*on_nvn_render)(void* window, int tex_idx);
     void (*on_imgui_init)(void* ctx, void* alloc, void* free);
     void (*on_imgui_render)();
     void (*on_imgui_free_render)();
@@ -296,6 +298,8 @@ extern "C" void forge_plugin_loadPlugins(void)
         plugin.events.on_init = plugin.getSymbol<void()>("forge_onInit");
         plugin.events.on_update = plugin.getSymbol<void(float)>("forge_onUpdate");
         plugin.events.on_nvn_init = plugin.getSymbol<void(void*, void*, void*)>("forge_onNvnInit");
+        plugin.events.on_nvn_ready = plugin.getSymbol<void()>("forge_onNvnReady");
+        plugin.events.on_nvn_render = plugin.getSymbol<void(void*, int)>("forge_onNvnRender");
         plugin.events.on_imgui_init = plugin.getSymbol<void(void*, void*, void*)>("forge_onImGuiInit");
         plugin.events.on_imgui_render = plugin.getSymbol<void()>("forge_onImGuiRender");
         plugin.events.on_imgui_free_render = plugin.getSymbol<void()>("forge_onImGuiFreeRender");
@@ -350,6 +354,24 @@ void forge_plugin_onNvnInit(void* get_proc_addr, void* device, void* queue)
     for (auto& plugin : s_pluginLoader.plugins) {
         if (plugin.events.on_nvn_init) {
             plugin.events.on_nvn_init(get_proc_addr, device, queue);
+        }
+    }
+}
+
+void forge_plugin_onNvnReady(void)
+{
+    for (auto& plugin : s_pluginLoader.plugins) {
+        if (plugin.events.on_nvn_ready) {
+            plugin.events.on_nvn_ready();
+        }
+    }
+}
+
+void forge_plugin_onNvnRender(void* window, int tex_idx)
+{
+    for (auto& plugin : s_pluginLoader.plugins) {
+        if (plugin.events.on_nvn_render) {
+            plugin.events.on_nvn_render(window, tex_idx);
         }
     }
 }
