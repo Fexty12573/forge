@@ -352,3 +352,7 @@ $RECYCLE.BIN/
 
 # forge version file
 version.h
+
+compile_commands.json
+.vscode/
+.clangd

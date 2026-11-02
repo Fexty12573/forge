@@ -13,6 +13,7 @@
 #include <nvn/nvn_CppMethods.h>
 
 #include <memory>
+#include <span>
 #include <string_view>
 #include <vector>
 
@@ -70,6 +71,7 @@ public:
 
     void render();
     bool isMenuVisible() const { return m_uiRendered; }
+    std::span<const nvn::Texture* const> getSwapChainTextures() const { return m_swapChainTextures; }
 
 private:
     nvn::Device* m_device { nullptr };
@@ -108,6 +110,16 @@ extern "C" bool forge_graphics_init(void)
 extern "C" bool forge_graphics_isMenuVisible(void)
 {
     return Graphics::get()->isMenuVisible();
+}
+
+extern "C" const void* forge_graphics_getSwapChainTextures(size_t* outCount)
+{
+    const auto textures = Graphics::get()->getSwapChainTextures();
+    if (outCount) {
+        *outCount = textures.size();
+    }
+
+    return textures.data();
 }
 
 void* nvnBootstrapLoaderHook(const char* name)
@@ -235,6 +247,8 @@ void Graphics::initialize()
 
     auto& io = ImGui::GetIO();
     io.Fonts->AddFontFromFileTTF(kDefaultFontPath, font_size);
+
+    forge_plugin_onNvnInit(reinterpret_cast<void*>(s_defaultNvnGetProcAddress), m_device, m_queue);
 
     setupStyle();
 

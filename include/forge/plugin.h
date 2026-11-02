@@ -11,6 +11,7 @@ void forge_plugin_loadPlugins(void);
 
 void forge_plugin_renderPluginInfo(void);
 
+void forge_plugin_onNvnInit(void* get_proc_addr, void* device, void* queue);
 void forge_plugin_onImGuiInit(void* ctx, void* alloc, void* free);
 void forge_plugin_onImGuiRender(void);
 void forge_plugin_onImGuiFreeRender(void);
