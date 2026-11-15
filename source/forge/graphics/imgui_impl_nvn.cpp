@@ -73,7 +73,10 @@ struct ImGui_ImplNVN_Data {
     void* texturePoolStorage;
     int samplerSlot;
     std::queue<int> unusedTextureSlots;
+    std::vector<std::pair<int, u64>> pendingSlotFrees; // (slot, frame it was released on)
+    std::vector<std::pair<ImTextureID, int>> userTextures;
 
+    u64 frameCount;
     u64 lastTick;
     float appliedDpiScale;
 
@@ -91,9 +94,23 @@ struct ImGui_ImplNVN_Data {
         return slot;
     }
 
+    // Slots are recycled only once every in-flight frame that may still sample them has completed.
     void FreeTextureSlot(int slot)
     {
-        unusedTextureSlots.push(slot);
+        pendingSlotFrees.emplace_back(slot, frameCount);
+    }
+
+    void RecyclePendingSlots()
+    {
+        const auto framesInFlight = swapChainTextures.size();
+        std::erase_if(pendingSlotFrees, [&](const auto& entry) {
+            if (frameCount - entry.second <= framesInFlight) {
+                return false;
+            }
+
+            unusedTextureSlots.push(entry.first);
+            return true;
+        });
     }
 };
 
@@ -577,6 +594,7 @@ IMGUI_IMPL_API void ImGui_ImplNVN_Init(nvn::Device* device, nvn::Queue* queue, s
     bd->device = device;
     bd->queue = queue;
     bd->swapChainTextures = swapChainTextures;
+    bd->frameCount = 0;
     bd->lastTick = 0;
     bd->appliedDpiScale = 1.0f; // style metrics start at the default (1x) scale
 
@@ -837,6 +855,8 @@ IMGUI_IMPL_API void ImGui_ImplNVN_RenderDrawData(nvn::Queue* queue, ImDrawData* 
 
     const auto bd = GetBackendData();
 
+    bd->RecyclePendingSlots();
+
     if (drawData->Textures != nullptr) {
         for (const auto tex : *drawData->Textures) {
             if (tex->Status != ImTextureStatus_OK) {
@@ -934,4 +954,38 @@ IMGUI_IMPL_API void ImGui_ImplNVN_RenderDrawData(nvn::Queue* queue, ImDrawData* 
     const auto handle = bd->cmdBuffer.EndRecording();
     queue->SubmitCommands(1, &handle);
     queue->Flush();
+
+    bd->frameCount++;
+}
+
+IMGUI_IMPL_API ImTextureID ImGui_ImplNVN_RegisterTexture(const nvn::Texture* texture, const nvn::TextureView* view)
+{
+    const auto bd = GetBackendData();
+
+    const int slot = bd->AllocateTextureSlot();
+    if (slot == -1) {
+        forge_log_error("Insufficient number of texture descriptors to register texture");
+        return ImTextureID_Invalid;
+    }
+
+    bd->texturePool.RegisterTexture(slot, texture, view);
+
+    const ImTextureID id = bd->device->GetTextureHandle(slot, bd->samplerSlot);
+    bd->userTextures.emplace_back(id, slot);
+
+    return id;
+}
+
+IMGUI_IMPL_API void ImGui_ImplNVN_UnregisterTexture(ImTextureID textureId)
+{
+    const auto bd = GetBackendData();
+
+    const auto it = std::ranges::find(bd->userTextures, textureId, &std::pair<ImTextureID, int>::first);
+    if (it == bd->userTextures.end()) {
+        forge_log_warn("Attempted to unregister unknown texture 0x%llX", textureId);
+        return;
+    }
+
+    bd->FreeTextureSlot(it->second);
+    bd->userTextures.erase(it);
 }

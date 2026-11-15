@@ -13,7 +13,10 @@
         forge_input_is*;
         forge_input_get*;
 
-        forge_graphics_is*;
+        forge_graphics_isMenuVisible;
+        forge_graphics_getSwapChainTextures;
+        forge_graphics_registerTexture;
+        forge_graphics_unregisterTexture;
 
         forge_nnos*;
 

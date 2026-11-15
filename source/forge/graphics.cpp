@@ -112,6 +112,18 @@ extern "C" bool forge_graphics_isMenuVisible(void)
     return Graphics::get()->isMenuVisible();
 }
 
+extern "C" uint64_t forge_graphics_registerTexture(const void* texture, const void* view)
+{
+    return ImGui_ImplNVN_RegisterTexture(
+        static_cast<const nvn::Texture*>(texture),
+        static_cast<const nvn::TextureView*>(view));
+}
+
+extern "C" void forge_graphics_unregisterTexture(uint64_t textureId)
+{
+    ImGui_ImplNVN_UnregisterTexture(textureId);
+}
+
 extern "C" const void* forge_graphics_getSwapChainTextures(size_t* outCount)
 {
     const auto textures = Graphics::get()->getSwapChainTextures();
