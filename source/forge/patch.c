@@ -1,4 +1,6 @@
 #include "forge/patch.h"
+#include "forge/log.h"
+#include "forge/mem.h"
 
 #include <stdlib.h>
 #include <string.h>
@@ -47,7 +49,11 @@ void forge_patch_enable(Patch* patch)
         return;
     }
 
-    memcpy((void*)patch->address, patch->patch_bytes, patch->size);
+    const Result rc = forge_mem_write(patch->address, patch->patch_bytes, patch->size);
+    if (R_FAILED(rc)) {
+        forge_log_trace("Failed to enable patch at 0x%08X: 0x%08X", patch->address, rc);
+        return;
+    }
     patch->enabled = true;
 }
 
@@ -57,6 +63,10 @@ void forge_patch_disable(Patch* patch)
         return;
     }
 
-    memcpy((void*)patch->address, patch->original_bytes, patch->size);
+    const Result rc = forge_mem_write(patch->address, patch->original_bytes, patch->size);
+    if (R_FAILED(rc)) {
+        forge_log_trace("Failed to disable patch at 0x%08X: 0x%08X", patch->address, rc);
+        return;
+    }
     patch->enabled = false;
 }

@@ -79,7 +79,15 @@ void forge_log(enum LogLevel level, const char* format, ...)
     va_start(args, format);
     int len = vsnprintf(buffer + offset, sizeof(buffer) - offset, format, args);
     va_end(args);
-    svcOutputDebugString(buffer, offset + (size_t)len);
+    if (len < 0) {
+        return;
+    }
+    size_t size = offset + (size_t)len;
+    if (size >= sizeof(buffer)) {
+        size = sizeof(buffer) - 1;
+    }
+    svcOutputDebugString(buffer, size);
+    forge_log_writeFile(buffer, size);
 }
 
 enum LogLevel forge_log_getLevel(void)
@@ -97,5 +105,13 @@ void forge_log_trace(const char* format, ...)
     int len = vsnprintf(buffer + offset, sizeof(buffer) - offset, format, args);
     va_end(args);
 
-    svcOutputDebugString(buffer, offset + (size_t)len);
+    if (len < 0) {
+        return;
+    }
+    size_t size = offset + (size_t)len;
+    if (size >= sizeof(buffer)) {
+        size = sizeof(buffer) - 1;
+    }
+    svcOutputDebugString(buffer, size);
+    forge_log_writeFile(buffer, size);
 }

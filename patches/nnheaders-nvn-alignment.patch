@@ -1,0 +1,11 @@
+--- a/include/nvn/nvn_Cpp.h
++++ b/include/nvn/nvn_Cpp.h
+@@ -1256,7 +1256,7 @@
+     NVNboolean WaitSync(const Sync*);
+ };
+ 
+-class CommandBuffer {
++class alignas(8) CommandBuffer {
+ protected:
+     char reserved[160];
+ 

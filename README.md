@@ -19,43 +19,33 @@ To make keyboard input work, you need to enable "Direct Keyboard Access" in the 
 
 ## Building
 
-Be sure to check out submodules first:
+Build with devkitARM GCC 16.1.0, GNU Make and Python 3. The small PIC C++ support
+subset in `libs/libstdcxx-pic/` must match the compiler's container headers.
 
 ```bash
 git submodule update --init --recursive
+bash build-hardware.sh
 ```
 
-To build the module you'll need [devkitPro](https://devkitpro.org/wiki/Getting_Started).
+Set `PYTHON` to your Python executable if `python3` is unavailable. The script
+sets devkitARM paths only for its own process. The build checks ELF/NSO
+relocations and outputs `subsdk.nso` and `main.npdm` here.
 
-Install devkitARM using pacman:
+The build applies the small injection-specific patches under `patches/` to the
+pinned submodule working trees. Their Git revisions remain unchanged; the patch
+files are part of this repository and are safe to apply repeatedly.
 
-```sh
-sudo (dkp-)pacman -Sy
-sudo (dkp-)pacman -S devkitARM
-```
+For the current installation, `subsdk.nso` is deployed as `exefs/subsdk9`.
+The NPDM is copied from the tested template under `metadata/` after validating
+its hash and required SVC permissions. Do not regenerate it from the old JSON
+unless you intend to change the game metadata.
 
-Use `dkp-pacman` on macOS and Debian-based distros and `pacman` otherwise.
+The build derives the loader version from Git tags and uses 1.5.1 for source
+archives or forks without release tags. It does not override the version with
+an older hardware-build label.
 
-Also install the `lz4` package:
-
-```sh
-# On Debian-based distros
-sudo apt install liblz4-dev
-
-# On Arch-based distros
-sudo pacman -S lz4
-
-# On macOS with Homebrew
-brew install lz4
-```
-
-Then you can build the module:
-
-```sh
-make
-```
-
-You'll find `subsdk.nso` and `main.npdm` in the project directory. Move `subsdk.nso` to `subsdk1` (for example) and `main.npdm` into an `exefs` folder in a mod directory.
+See [hardware compatibility](docs/hardware-compatibility.md) for the source
+changes, NPDM permissions, plugin requirements and validation scope.
 
 ## Credits
 

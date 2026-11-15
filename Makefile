@@ -22,7 +22,8 @@ SOURCES 	:= 	source \
 				source/forge \
 				source/forge/graphics \
 				libs/cimgui \
-				libs/cimgui/imgui
+				libs/cimgui/imgui \
+				libs/libstdcxx-pic
 
 DATA		:=	data
 INCLUDES	:=	include \
@@ -40,7 +41,7 @@ INIPARSER_LIB	:=	$(INIPARSER_BUILD)/libiniparser.a
 #---------------------------------------------------------------------------------
 # options for code generation
 #---------------------------------------------------------------------------------
-ARCH	:=	-march=armv8-a+crc+crypto -mtune=cortex-a57 -mtp=soft -mfloat-abi=softfp -mfpu=crypto-neon-fp-armv8 -fPIC -ftls-model=initial-exec
+ARCH	:=	-march=armv8-a+crc+crypto -mtune=cortex-a57 -mtp=soft -mfloat-abi=softfp -mfpu=crypto-neon-fp-armv8 -fPIC -ftls-model=initial-exec -fno-short-enums
 
 CFLAGS	:=	-g -Wall -Werror \
 			-ffunction-sections \
@@ -48,7 +49,8 @@ CFLAGS	:=	-g -Wall -Werror \
 			$(ARCH) \
 			$(BUILD_CFLAGS)
 
-CFLAGS	+=	$(INCLUDE) -D__SWITCH__ -DLIBNX_NO_DEPRECATION
+CFLAGS	+=	$(INCLUDE) -D__SWITCH__ -DLIBNX_NO_DEPRECATION -DFORGE_INJECTED_NSO \
+		-DIMGUI_DISABLE_DEFAULT_SHELL_FUNCTIONS -DIMGUI_DISABLE_TTY_FUNCTIONS
 
 CXXFLAGS	:= $(CFLAGS) -std=c++23 -fno-rtti -fomit-frame-pointer -fno-exceptions -fno-asynchronous-unwind-tables -fno-unwind-tables -enable-libstdcxx-allocator=new -fpermissive -fno-threadsafe-statics \
 			-include $(TOPDIR)/include/compat.h \
@@ -57,24 +59,29 @@ CXXFLAGS	:= $(CFLAGS) -std=c++23 -fno-rtti -fomit-frame-pointer -fno-exceptions 
 
 ASFLAGS	:=	-g $(ARCH)
 
-LDFLAGS  =  -specs=$(TOPDIR)/switch32.specs -g $(ARCH) -Wl,-Map,$(notdir $*.map) -Wl,--version-script=$(TOPDIR)/exported.txt -Wl,-init=forge_init -Wl,-fini=forge_fini -Wl,--export-dynamic -nodefaultlibs
+SDK_MATH := sinf logf powf cosf fmodf acosf floorf sqrtf ceilf log pow sqrt atan2f
+LDFLAGS  =  -specs=$(TOPDIR)/switch32.specs -g $(ARCH) -Wl,-Map,$(notdir $*.map) -Wl,--version-script=$(TOPDIR)/exported.txt -Wl,-init=forge_init -Wl,-fini=forge_fini -Wl,--export-dynamic -nodefaultlibs -nostartfiles -Wl,-z,text $(foreach name,$(SDK_MATH),-Wl,--wrap=$(name))
 
-LIBS	:= -liniparser -lgcc -lstdc++ -u malloc -lnx32_min -lm
+LIBS	:= -liniparser -lgcc -u malloc -lnx32_min
 
 #---------------------------------------------------------------------------------
 # list of directories containing libraries, this must be the top level containing
 # include and lib
 #---------------------------------------------------------------------------------
 LIBDIRS	:= $(TOPDIR)/libs/libnx/nx
+LIBNX_MIN_LIB := $(TOPDIR)/libs/libnx/nx/lib/libnx32_min.a
 
 SWITCH_TOOLS_SRC	:=	$(TOPDIR)/libs/switch-tools/src
-ELF2NSO32			:=	$(TOPDIR)/tools/elf2nso32
+PYTHON ?= python3
+HOST_CC ?= gcc
+ELF2NSO32			:=	$(TOPDIR)/tools/elf2nso32.py
 NPDMTOOL			:=	$(TOPDIR)/tools/npdmtool
 
 #---------------------------------------------------------------------------------
 # version derived from latest git tag + short commit hash when not at tag
 #---------------------------------------------------------------------------------
-GIT_TAG			:=	$(shell git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
+# Source archives and forks without release tags use this tree's upstream base.
+GIT_TAG			:=	$(shell git describe --tags --abbrev=0 2>/dev/null || echo "v1.5.1")
 GIT_COMMIT		:=	$(shell git rev-parse --short HEAD 2>/dev/null || echo "unknown")
 GIT_EXACT		:=	$(shell git describe --exact-match --tags HEAD >/dev/null 2>&1 && echo 1 || echo 0)
 
@@ -151,20 +158,25 @@ else
 	export APP_JSON := $(TOPDIR)/$(CONFIG_JSON)
 endif
 
-.PHONY: $(BUILD) clean all
+.PHONY: $(BUILD) clean all prepare-dependencies
 
 #---------------------------------------------------------------------------------
 
-all: $(BUILD)
+all: $(BUILD) $(TOPDIR)/main.npdm
 
-$(ELF2NSO32): $(SWITCH_TOOLS_SRC)/elf2nso32.c $(SWITCH_TOOLS_SRC)/sha256.c
-	@mkdir -p $(dir $@)
-	@cc -O2 -I$(SWITCH_TOOLS_SRC) -o $@ $^ -llz4
-	@echo built ... $(notdir $@)
+# This checked-in input must never be rebuilt through the generic %.npdm rule.
+$(TOPDIR)/metadata/main-hardware.npdm: ;
+
+prepare-dependencies:
+	@$(PYTHON) $(TOPDIR)/tools/apply_hardware_patches.py
+
+# Preserve the tested title metadata instead of regenerating unrelated fields.
+$(TOPDIR)/main.npdm: $(TOPDIR)/metadata/main-hardware.npdm $(TOPDIR)/tools/prepare_npdm.py
+	@$(PYTHON) $(TOPDIR)/tools/prepare_npdm.py
 
 $(NPDMTOOL): $(SWITCH_TOOLS_SRC)/npdmtool.c $(SWITCH_TOOLS_SRC)/cJSON.c $(SWITCH_TOOLS_SRC)/cJSON.h
 	@mkdir -p $(dir $@)
-	@cc -O2 -I$(SWITCH_TOOLS_SRC) -o $@ $^
+	@$(HOST_CC) -O2 -I$(SWITCH_TOOLS_SRC) -o $@ $(filter %.c,$^)
 	@echo built ... $(notdir $@)
 
 $(VERSION_HEADER): $(TOPDIR)/data/version.h.in
@@ -179,7 +191,7 @@ $(VERSION_HEADER): $(TOPDIR)/data/version.h.in
 		$< > $@
 	@echo generated ... $(notdir $@)
 
-$(BUILD): $(ELF2NSO32) $(NPDMTOOL) $(VERSION_HEADER)
+$(BUILD): prepare-dependencies $(ELF2NSO32) $(VERSION_HEADER)
 	@$(MAKE) -C $(CURDIR)/libs/libnx/nx -f $(CURDIR)/libs/libnx/nx/Makefile.32_min.mk
 	@[ -d $@ ] || mkdir -p $@
 	@$(MAKE) -C $(BUILD) -f $(CURDIR)/Makefile
@@ -188,7 +200,7 @@ $(BUILD): $(ELF2NSO32) $(NPDMTOOL) $(VERSION_HEADER)
 clean:
 	@$(MAKE) -C $(CURDIR)/libs/libnx/nx -f $(CURDIR)/libs/libnx/nx/Makefile.32_min.mk clean
 	@echo clean ...
-	@rm -fr build* *.nso *.elf *.npdm tools
+	@rm -fr $(BUILD) *.nso *.elf *.npdm tools/npdmtool tools/npdmtool.exe
 
 #---------------------------------------------------------------------------------
 else
@@ -202,9 +214,12 @@ INIPARSER_OBJS	:=	$(INIPARSER_BUILD)/iniparser.o $(INIPARSER_BUILD)/dictionary.o
 #---------------------------------------------------------------------------------
 all	: $(OUTPUT).nso
 
-$(OUTPUT).nso	:	$(OUTPUT).elf $(TOPDIR)/main.npdm
+$(OUTPUT).nso	:	$(OUTPUT).elf $(ELF2NSO32) $(TOPDIR)/tools/check_relocations.py
 
-$(OUTPUT).elf	:	$(OFILES) $(INIPARSER_LIB)
+$(OUTPUT).elf	:	$(OFILES) $(INIPARSER_LIB) $(LIBNX_MIN_LIB) $(TOPDIR)/Makefile $(TOPDIR)/switch32.specs $(TOPDIR)/switch32.ld
+
+# Built by the outer libnx make; do not recreate it with the generic %.a rule.
+$(LIBNX_MIN_LIB): ;
 
 $(OFILES_SRC)	: $(HFILES_BIN) $(TOPDIR)/$(BUILD)/forge/version.h
 

@@ -25,6 +25,7 @@
 
 #include "forge/hook.h"
 #include "forge/log.h"
+#include "forge/mem.h"
 #include "forge/types.h"
 #include "forge/wrapper.h"
 #include <forge/nn/os.h>
@@ -143,7 +144,7 @@ static int getInstructionSize(uintptr_t addr, bool thumb)
     if (thumb) {
         uint16_t ins = *(uint16_t*)(addr);
 
-        if ((ins & 0xF800) == 0xF000 || (ins & 0xFF00) == 0xE800) {
+        if ((ins & 0xF800) >= 0xE800) {
             return 4;
         }
 
@@ -187,7 +188,7 @@ static bool hookFunction(void* const target, void* const detour, void** original
     bool thumb_mode = isThumbMode(target_addr);
     uintptr_t real_target = getRealAddress(target_addr);
 
-    int min_bytes = thumb_mode ? 6 : 8;
+    int min_bytes = thumb_mode && (real_target & 2) ? 10 : 8;
     int instruction_count = calculateHookLength(real_target, thumb_mode, min_bytes);
     int total_bytes = 0;
 
@@ -198,7 +199,8 @@ static bool hookFunction(void* const target, void* const detour, void** original
     }
 
     if (original != NULL) {
-        size_t trampoline_size = (size_t)(total_bytes + 8);
+        const size_t jump_padding = thumb_mode && (total_bytes & 2) ? 2 : 0;
+        size_t trampoline_size = (size_t)(total_bytes + jump_padding + 8);
         JitSlot slot;
 
         if (!allocJitSlot(trampoline_size, &slot)) {
@@ -218,10 +220,14 @@ static bool hookFunction(void* const target, void* const detour, void** original
                 return_addr |= 1;
             }
 
+            if (jump_padding) {
+                thumb_tramp[total_bytes / 2] = 0xBF00; // nop; align literal load
+            }
+            const size_t jump = (total_bytes + jump_padding) / 2;
             // ldr.w pc, [pc]
-            thumb_tramp[total_bytes / 2] = 0xF8DF;
-            thumb_tramp[total_bytes / 2 + 1] = 0xF000;
-            *(uintptr_t*)(&thumb_tramp[total_bytes / 2 + 2]) = return_addr;
+            thumb_tramp[jump] = 0xF8DF;
+            thumb_tramp[jump + 1] = 0xF000;
+            memcpy(&thumb_tramp[jump + 2], &return_addr, sizeof(return_addr));
         } else {
             uint32_t* arm_tramp = (uint32_t*)(slot.rw);
             uint32_t* src = (uint32_t*)(real_target);
@@ -245,21 +251,24 @@ static bool hookFunction(void* const target, void* const detour, void** original
         *original = (void*)(result_ptr);
     }
 
+    // Thumb literal loads use Align(PC, 4), so allow a leading NOP at +2.
+    const size_t prefix = thumb_mode && (real_target & 2) ? 2 : 0;
+    u8 branch[10];
     if (thumb_mode) {
-        uint16_t* code = (uint16_t*)(real_target);
-
-        // Thumb hook: push lr; ldr r12, [pc, #4]; blx r12; pop {pc}; .addr hook_addr
-        code[0] = 0xB500; // push {lr}
-        code[1] = 0x9C02; // ldr r12, [pc, #8]
-        code[2] = 0x47E0; // blx r12
-        code[3] = 0xBD00; // pop {pc}
-        code[4] = hook_addr & 0xFFFF;
-        code[5] = hook_addr >> 16;
+        const uint16_t nop = 0xBF00;
+        const uint16_t load_pc[] = { 0xF8DF, 0xF000 };
+        memcpy(branch, &nop, prefix);
+        memcpy(branch + prefix, load_pc, sizeof(load_pc));
+        memcpy(branch + prefix + 4, &hook_addr, sizeof(hook_addr));
     } else {
-        uint32_t* code = (uint32_t*)(real_target);
-
-        code[0] = 0xE51FF004;
-        code[1] = hook_addr;
+        const uint32_t load_pc = 0xE51FF004;
+        memcpy(branch, &load_pc, sizeof(load_pc));
+        memcpy(branch + 4, &hook_addr, sizeof(hook_addr));
+    }
+    const Result rc = forge_mem_write(real_target, branch, prefix + 8);
+    if (R_FAILED(rc)) {
+        forge_log_trace("Failed to write hook at %p: 0x%08X", target, rc);
+        return false;
     }
 
     syncCodeForExecution((void*)(real_target), (void*)(real_target), (size_t)(total_bytes));

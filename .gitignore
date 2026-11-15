@@ -1,9 +1,14 @@
 build/
 *.nso
 *.npdm
+!metadata/main-hardware.npdm
 *.lst
 
-tools/
+/tools/*
+!/tools/check_relocations.py
+!/tools/elf2nso32.py
+!/tools/prepare_npdm.py
+!/tools/apply_hardware_patches.py
 
 # Created by https://www.toptal.com/developers/gitignore/api/cmake,linux,macos,windows,visualstudiocode,python,c,c++,assembler
 # Edit at https://www.toptal.com/developers/gitignore?templates=cmake,linux,macos,windows,visualstudiocode,python,c,c++,assembler

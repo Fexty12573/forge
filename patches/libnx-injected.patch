@@ -1,0 +1,152 @@
+--- a/nx/Makefile.32_min.mk
++++ b/nx/Makefile.32_min.mk
+@@ -24,7 +24,7 @@
+ #---------------------------------------------------------------------------------
+ # options for code generation
+ #---------------------------------------------------------------------------------
+-ARCH	:=	-march=armv8-a+crc+crypto -mtune=cortex-a57 -mtp=soft -fPIC -ftls-model=local-exec
++ARCH	:=	-march=armv8-a+crc+crypto -mtune=cortex-a57 -mtp=soft -fPIC -ftls-model=local-exec -fno-short-enums
+ 
+ CFLAGS	:=	-g -Wall -Werror \
+ 			-ffunction-sections \
+@@ -32,7 +32,7 @@
+ 			$(ARCH) \
+ 			$(BUILD_CFLAGS)
+ 
+-CFLAGS	+=	$(INCLUDE) -D__SWITCH__ -DLIBNX_NO_DEPRECATION
++CFLAGS	+=	$(INCLUDE) -D__SWITCH__ -DLIBNX_NO_DEPRECATION -DFORGE_INJECTED_NSO
+ 
+ CXXFLAGS	:= $(CFLAGS) -fno-rtti -fno-exceptions -std=gnu++11
+ 
+@@ -117,14 +117,14 @@
+ 	BUILD_CFLAGS="-DNDEBUG=1 -O2" \
+ 	DEPSDIR=$(CURDIR)/release \
+ 	--no-print-directory -C release \
+-	-f $(CURDIR)/Makefile.32.mk
++	-f $(CURDIR)/Makefile.32_min.mk
+ 
+ lib/libnx32d_min.a : lib debug $(SOURCES) $(INCLUDES)
+ 	@$(MAKE) BUILD=debug OUTPUT=$(CURDIR)/$@ \
+ 	BUILD_CFLAGS="-DDEBUG=1 -Og" \
+ 	DEPSDIR=$(CURDIR)/debug \
+ 	--no-print-directory -C debug \
+-	-f $(CURDIR)/Makefile.32.mk
++	-f $(CURDIR)/Makefile.32_min.mk
+ 
+ #---------------------------------------------------------------------------------
+ clean:
+--- a/nx/source/kernel/virtmem.c
++++ b/nx/source/kernel/virtmem.c
+@@ -21,7 +21,12 @@
+     MemRegion region;
+ };
+ 
+-static Mutex g_VirtmemMutex;
++// This library runs on Nintendo SDK threads, whose TLS is not libnx ThreadVars.
++extern void forge_nnosInitializeMutex(void*, bool);
++extern void forge_nnosLockMutex(void*);
++extern void forge_nnosUnlockMutex(void*);
++extern bool forge_nnosIsMutexLockedByCurrentThread(const void*);
++static u8 g_VirtmemMutex[0x14] __attribute__((aligned(4)));
+ 
+ static MemRegion g_AliasRegion;
+ static MemRegion g_HeapRegion;
+@@ -154,6 +159,7 @@
+ 
+ void virtmemSetup(void) {
+     Result rc;
++    forge_nnosInitializeMutex(g_VirtmemMutex, false);
+ 
+     // Retrieve memory region information for the reserved alias region.
+     rc = _memregionInitWithInfo(&g_AliasRegion, InfoType_AliasRegionAddress, InfoType_AliasRegionSize);
+@@ -211,31 +217,31 @@
+ }
+ 
+ void virtmemLock(void) {
+-    mutexLock(&g_VirtmemMutex);
++    forge_nnosLockMutex(g_VirtmemMutex);
+ }
+ 
+ void virtmemUnlock(void) {
+-    mutexUnlock(&g_VirtmemMutex);
++    forge_nnosUnlockMutex(g_VirtmemMutex);
+ }
+ 
+ void* virtmemFindAslr(size_t size, size_t guard_size) {
+-    if (!mutexIsLockedByCurrentThread(&g_VirtmemMutex)) return NULL;
++    if (!forge_nnosIsMutexLockedByCurrentThread(g_VirtmemMutex)) return NULL;
+     return _memregionFindRandom(&g_AslrRegion, size, guard_size);
+ }
+ 
+ void* virtmemFindStack(size_t size, size_t guard_size) {
+-    if (!mutexIsLockedByCurrentThread(&g_VirtmemMutex)) return NULL;
++    if (!forge_nnosIsMutexLockedByCurrentThread(g_VirtmemMutex)) return NULL;
+     return _memregionFindRandom(&g_StackRegion, size, guard_size);
+ }
+ 
+ void* virtmemFindCodeMemory(size_t size, size_t guard_size) {
+-    if (!mutexIsLockedByCurrentThread(&g_VirtmemMutex)) return NULL;
++    if (!forge_nnosIsMutexLockedByCurrentThread(g_VirtmemMutex)) return NULL;
+     // [1.0.0] requires CodeMemory to be mapped within the stack region.
+     return _memregionFindRandom(g_IsLegacyKernel ? &g_StackRegion : &g_AslrRegion, size, guard_size);
+ }
+ 
+ VirtmemReservation* virtmemAddReservation(void* mem, size_t size) {
+-    if (!mutexIsLockedByCurrentThread(&g_VirtmemMutex)) return NULL;
++    if (!forge_nnosIsMutexLockedByCurrentThread(g_VirtmemMutex)) return NULL;
+     VirtmemReservation* rv = (VirtmemReservation*)__libnx_alloc(sizeof(VirtmemReservation));
+     if (rv) {
+         rv->region.start = (uintptr_t)mem;
+@@ -250,7 +256,7 @@
+ }
+ 
+ void virtmemRemoveReservation(VirtmemReservation* rv) {
+-    if (!mutexIsLockedByCurrentThread(&g_VirtmemMutex)) return;
++    if (!forge_nnosIsMutexLockedByCurrentThread(g_VirtmemMutex)) return;
+     if (rv->next)
+         rv->next->prev = rv->prev;
+     if (rv->prev)
+--- a/nx/source/runtime/env.c
++++ b/nx/source/runtime/env.c
+@@ -18,7 +18,9 @@
+ static u64    g_overrideHeapSize = 0;
+ static void*  g_overrideArgv = NULL;
+ static u64    g_syscallHints[3];
++#ifndef FORGE_INJECTED_NSO
+ static Handle g_processHandle = INVALID_HANDLE;
++#endif
+ static char*  g_nextLoadPath = NULL;
+ static char*  g_nextLoadArgv = NULL;
+ static Result g_lastLoadResult = 0;
+@@ -41,6 +43,10 @@
+         return;
+     }
+ 
++#ifdef FORGE_INJECTED_NSO
++    // Forge is an injected NSO, not a homebrew NRO receiving loader entries.
++    diagAbortWithResult(MAKERESULT(Module_Libnx, LibnxError_BadInput));
++#else
+     // Save the loader return address.
+     g_loaderRetAddr = saved_lr;
+ 
+@@ -131,6 +137,7 @@
+     if (g_loaderInfoSize) {
+         g_loaderInfo = (const char*)(uintptr_t)ent->Value[0];
+     }
++#endif
+ 
+ }
+ 
+@@ -180,7 +187,12 @@
+ }
+ 
+ Handle envGetOwnProcessHandle(void) {
++#ifdef FORGE_INJECTED_NSO
++    extern Handle forge_proc_getHandle(void);
++    return forge_proc_getHandle();
++#else
+     return g_processHandle;
++#endif
+ }
+ 
+ LoaderReturnFn envGetExitFuncPtr(void) {

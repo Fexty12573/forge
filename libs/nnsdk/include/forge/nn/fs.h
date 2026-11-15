@@ -22,4 +22,13 @@ void CloseFile(FileHandle handle) noexcept;
 Result GetFileSize(s64* outValue, FileHandle handle) noexcept;
 Result ReadFile(FileHandle handle, s64 offset, void* buffer, size_t size) noexcept;
 
+struct WriteOption {
+    int flags;
+};
+Result MountSdCard(const char* mount) noexcept;
+Result CreateFile(const char* path, s64 size) noexcept;
+Result SetFileSize(FileHandle handle, s64 size) noexcept;
+Result WriteFile(FileHandle handle, s64 offset, const void* buffer, size_t size,
+    const WriteOption& option) noexcept;
+
 }
