@@ -91,14 +91,3 @@ extern "C" const char* forge_fs_getRomFsMountPoint(void)
 {
     return kRomFsMountPoint;
 }
-
-extern "C" bool forge_fs_fileExists(const char* path)
-{
-    nn::fs::FileHandle handle;
-    if (nn::fs::OpenFile(&handle, path, nn::fs::OpenMode_Read).IsFailure()) {
-        return false;
-    }
-
-    nn::fs::CloseFile(handle);
-    return true;
-}
